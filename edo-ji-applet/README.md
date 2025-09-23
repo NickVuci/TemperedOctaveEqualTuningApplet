@@ -21,7 +21,7 @@ Notes:
 - Deviations are shown to two decimal places; tiny deviations (< 0.01c) are treated as zero for coloring.
 
 ## Development
-All logic lives in `script.js`. The canvas draws two horizontal rulers:
+The app is implemented as browser-native ES Modules under `src/`. The entrypoint is `src/main.js`, loaded from `index.html` via `<script type="module">`. The canvas draws two horizontal rulers:
 - Top: EDO ticks (0..EDO) colored by deviation from nearest JI interval
 - Bottom: JI ticks (0..1200 cents)
 
@@ -36,6 +36,23 @@ Color scheme for EDO deviations:
 ```
 edo-ji-applet/
   index.html
-  script.js
   README.md
+  src/
+    main.js
+    state/
+      store.js
+    ui/
+      dom.js
+    parse/
+      manual.js
+    tuning/
+      edo.js
+      ji.js
+    render/
+      canvas.js
+      layout.js
+      constants.js
+    utils/
+      math.js
+      array.js
 ```

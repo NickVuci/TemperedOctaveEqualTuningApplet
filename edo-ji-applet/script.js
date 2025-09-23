@@ -1,3 +1,5 @@
+// This file has been migrated to ESM modules in src/.
+// See src/main.js as the entry point.
 // --- Core helpers ---
 function ratioToCents(ratio) { return 1200 * Math.log2(ratio); }
 function generateEDOIntervals(edo, octaveCents) {

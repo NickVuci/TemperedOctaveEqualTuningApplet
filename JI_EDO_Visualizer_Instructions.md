@@ -9,8 +9,9 @@ The applet will visualize **Just Intonation (JI) intervals vs Equal Division of 
 1. Open **VSCode**.
 2. Create a new folder for the project, e.g., `edo-ji-applet`.
 3. Inside the folder, create:
-   - `index.html`
-   - `README.md` (this file can serve as documentation).
+  - `index.html`
+  - `README.md` (this file can serve as documentation).
+  - `src/` (ES Modules live here)
 
 ---
 
@@ -43,7 +44,7 @@ The applet will visualize **Just Intonation (JI) intervals vs Equal Division of 
   </div>
   <canvas id="visualizer" width="1000" height="200"></canvas>
 
-  <script src="script.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
 ```
@@ -51,8 +52,12 @@ The applet will visualize **Just Intonation (JI) intervals vs Equal Division of 
 ---
 
 ## Step 3: Add JavaScript Logic
-1. Create `script.js` in the project folder.
-2. Implement core helper functions:
+1. Create `src/` with modular files. Example breakdown:
+  - `src/utils/math.js` — ratio helpers
+  - `src/tuning/edo.js` — EDO generation
+  - `src/render/canvas.js` — drawing
+  - `src/main.js` — wire inputs and draw
+2. Implement core helper functions in `src/utils/math.js`:
 
 ```javascript
 function ratioToCents(ratio) {
@@ -117,7 +122,7 @@ function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
 ---
 
 ## Step 5: Handling Inputs and Updates
-1. Add event listeners in `script.js` to recompute intervals and redraw when inputs change.
+1. Add event listeners in `src/main.js` to recompute intervals and redraw when inputs change.
 
 ```javascript
 const canvas = document.getElementById("visualizer");
@@ -164,10 +169,17 @@ update();
 ```
 edo-ji-applet/
   index.html
-  script.js
   README.md
+  src/
+    main.js
+    utils/
+      math.js
+    tuning/
+      edo.js
+    render/
+      canvas.js
 ```
 
 ---
 
-This is the development roadmap. Copilot should be guided step by step by editing `index.html` and `script.js` in VSCode, following the instructions above.
+This is the development roadmap. Copilot should be guided step by step by editing `index.html` and the modules in `src/` in VSCode, following the instructions above.
