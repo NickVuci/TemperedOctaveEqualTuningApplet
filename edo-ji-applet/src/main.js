@@ -60,6 +60,8 @@ function resizeCanvasToContainer() {
   els.canvas.width = Math.floor(innerW * dpr);
   els.canvas.height = Math.floor(innerH * dpr);
   els.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Immediate redraw with current state so visuals persist during resize
+  redrawWithCurrentState();
 }
 
 function update() {
@@ -101,3 +103,23 @@ window.addEventListener('resize', () => { resizeCanvasToContainer(); saveContain
 // First render
 resizeCanvasToContainer();
 update();
+
+// Redraw helper using current state and current label toggles
+function redrawWithCurrentState() {
+  const state = getState();
+  if (!state || !Array.isArray(state.ji) || !state.ji.length || !Array.isArray(state.edo) || !state.edo.length) return;
+  const { width, height } = getCanvasCssSize();
+  const showEdoLabels = !!(els.showEdoLabelsEl && els.showEdoLabelsEl.checked);
+  const showJiLabels = !!(els.showJiLabelsEl && els.showJiLabelsEl.checked);
+  const res = drawRulers({
+    ctx: els.ctx,
+    width,
+    height,
+    jiIntervals: state.ji,
+    jiData: state.jiData,
+    edoIntervals: state.edo,
+    showEdoLabels,
+    showJiLabels,
+  });
+  setState({ jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
+}
