@@ -56,3 +56,27 @@ edo-ji-applet/
       math.js
       array.js
 ```
+
+## Development: editing modules
+- Entry point: `src/main.js` orchestrates control reads, data building, and drawing.
+- UI & DOM: `src/ui/dom.js` centralizes element lookups and event wiring (controls, tooltip, selection).
+- Rendering: `src/render/canvas.js` (drawing), `src/render/layout.js` (label packing), `src/render/constants.js` (colors/fonts/gaps), `src/render/scale.js` (cents↔x helpers).
+- Tuning logic: `src/tuning/edo.js` and `src/tuning/ji.js` (pure functions, no DOM access).
+- Parsing: `src/parse/manual.js` handles fractions/cents input.
+- Utilities: `src/utils/math.js` (ratios, gcd, normalization), `src/utils/array.js` (nearest, uniq by cents).
+- State: `src/state/store.js` keeps the last computed values shared across modules.
+
+Conventions
+- Keep render and tuning modules pure (no direct DOM reads). Pass data/flags in via function args.
+- Use JSDoc on exported functions for better IntelliSense and clarity.
+- Keep imports relative and browser-friendly (no bundler required). The app runs by opening `index.html`.
+
+Adding a new feature (example)
+1. Define any new math/array helpers in `src/utils/` (with JSDoc).
+2. Extend parsing or tuning in `src/parse/` or `src/tuning/` as needed (pure functions).
+3. If it affects layout/drawing, add options to `drawRulers` or `computeJiLabelRows` (keep them pure) and thread flags from `main`.
+4. Wire new UI controls in `src/ui/dom.js` and thread values into `main.update()`.
+5. Update `index.html` controls if a new input or toggle is needed.
+
+Running locally
+- Open `index.html` directly in a modern browser. Since everything is ES Modules and static assets, no build step is required.
