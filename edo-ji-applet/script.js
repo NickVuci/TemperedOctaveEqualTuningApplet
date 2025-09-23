@@ -130,34 +130,25 @@ function generatePrimeLimitIntervals(primeLimit = 5) {
 let lastDraw = { jiPixelXs: [] };
 function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
   ctx.clearRect(0, 0, width, height);
+  const half = height / 2;
 
-  // Draw JI intervals (bottom line)
-  ctx.strokeStyle = "blue";
-  ctx.beginPath();
-  ctx.moveTo(0, height - 20);
-  ctx.lineTo(width, height - 20);
-  ctx.stroke();
+  // JI intervals: bottom half
   const jiXs = [];
   jiIntervals.forEach(c => {
     const x = (c / 1200) * width;
     ctx.fillStyle = "blue";
-    ctx.fillRect(x, height - 30, 2, 10);
+    ctx.fillRect(x, half, 2, half);
     jiXs.push(x);
   });
   lastDraw.jiPixelXs = jiXs;
 
-  // Draw EDO intervals (top line)
-  ctx.strokeStyle = "black";
-  ctx.beginPath();
-  ctx.moveTo(0, 20);
-  ctx.lineTo(width, 20);
-  ctx.stroke();
+  // EDO intervals: top half
   edoIntervals.forEach(c => {
     const x = (c / 1200) * width;
     const nearest = jiIntervals.reduce((a, b) => Math.abs(b - c) < Math.abs(a - c) ? b : a, jiIntervals[0] ?? 0);
     const diff = c - nearest;
     ctx.fillStyle = getColorForDeviation(diff);
-    ctx.fillRect(x, 10, 2, 10);
+    ctx.fillRect(x, 0, 2, half);
   });
 }
 
@@ -339,8 +330,8 @@ canvas.addEventListener("click", (ev) => {
   const rect = canvas.getBoundingClientRect();
   const x = ev.clientX - rect.left;
   const y = ev.clientY - rect.top;
-  // Only consider clicks near the JI ruler at the bottom (10px tall above bottom line)
-  if (y < canvas.height - 40 || y > canvas.height) return;
+  // Only consider clicks in the bottom half for JI selection
+  if (y < canvas.height / 2 || y > canvas.height) return;
   const jiXs = lastDraw.jiPixelXs || [];
   if (!jiXs.length || !lastState.ji.length) return;
   let bestIdx = 0, bestDx = Infinity;
