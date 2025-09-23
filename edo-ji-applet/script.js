@@ -61,68 +61,52 @@ function uniqSortedCents(centsArray, epsilon = 0.5) {
   return out;
 }
 
-function generateOddLimitIntervals(oddLimit = 7) {
+function generateOddLimitFractions(oddLimit = 7) {
   // Only accept odd numbers; if even, decrement by 1
   let lim = Math.max(1, Math.floor(oddLimit));
   if (lim % 2 === 0) lim -= 1;
-  const vals = new Set();
+  const fracs = [];
   function gcd(a, b) { return b ? gcd(b, a % b) : Math.abs(a); }
-  // Reduced odd/odd fractions n/d with n,d odd <= lim
   for (let n = 1; n <= lim; n += 2) {
     for (let d = 1; d <= lim; d += 2) {
       if (gcd(n, d) !== 1) continue;
-      let r = n / d;
-      if (r <= 0) continue;
-      // Map to [1, 2)
-      while (r < 1) r *= 2;
-      while (r >= 2) r /= 2;
-      const c = ratioToCents(r);
-      if (c >= 0 && c <= 1200) vals.add(Math.round(c * 1000) / 1000);
+      fracs.push([n, d]);
     }
   }
-  // Always include 0 (1/1)
-  vals.add(0);
-  return Array.from(vals).sort((a, b) => a - b);
+  return fracs;
 }
 
-function generatePrimeLimitIntervals(primeLimit = 5) {
-  const lim = Math.max(2, Math.floor(primeLimit));
-  const primes = [2, 3, 5, 7, 11, 13].filter(p => p <= lim);
-  const vals = new Set();
-  // Exponent search within small bounds to avoid explosion
-  // Adapt bound based on number of primes to keep combinations reasonable
-  let bound = 4;
-  if (primes.length >= 6) bound = 2; // up to ~5k combos
-  else if (primes.length >= 5) bound = 3; // up to ~16k combos
-  const exps = primes.map(() => 0);
-
-  function* enumerate(idx = 0) {
-    if (idx === primes.length) {
-      yield [...exps];
-      return;
-    }
-    for (let e = -bound; e <= bound; e++) {
-      exps[idx] = e;
-      yield* enumerate(idx + 1);
-    }
+function maxPrimeFactor(n) {
+  if (n <= 1) return 1;
+  let num = n;
+  let maxP = 1;
+  while (num % 2 === 0) { maxP = 2; num = Math.floor(num / 2); }
+  for (let p = 3; p * p <= num; p += 2) {
+    while (num % p === 0) { maxP = p; num = Math.floor(num / p); }
   }
+  if (num > 1) maxP = num;
+  return maxP;
+}
 
-  for (const vec of enumerate()) {
-    // Skip all-zero
-    if (vec.every(e => e === 0)) continue;
-    let r = 1;
-    for (let i = 0; i < primes.length; i++) {
-      r *= Math.pow(primes[i], vec[i]);
-      if (!Number.isFinite(r) || r === 0) break;
-    }
-    if (!Number.isFinite(r) || r <= 0) continue;
-    // Map into [1,2)
+function filterFractionsByPrimeLimit(fracs, primeLimit) {
+  if (!Number.isFinite(primeLimit) || primeLimit <= 0) return fracs;
+  const lim = Math.floor(primeLimit);
+  return fracs.filter(([n, d]) => maxPrimeFactor(n) <= lim && maxPrimeFactor(d) <= lim);
+}
+
+function fractionsToCents(fracs) {
+  const vals = new Set();
+  for (const [n, d] of fracs) {
+    let r = n / d;
+    if (r <= 0) continue;
+    // Map to [1, 2)
     while (r < 1) r *= 2;
     while (r >= 2) r /= 2;
     const c = ratioToCents(r);
     if (c >= 0 && c <= 1200) vals.add(Math.round(c * 1000) / 1000);
   }
-
+  // Always include 0 (1/1)
+  vals.add(0);
   return Array.from(vals).sort((a, b) => a - b);
 }
 
@@ -175,47 +159,15 @@ function buildJI() {
   const manual = parseManualIntervals(document.getElementById("manualIntervals").value);
 
   let ji = [];
-  // Generate odd-limit set first (required base set)
+  // Generate odd-limit fractions first
   if (Number.isFinite(oddLimit) && oddLimit > 0) {
-    ji = generateOddLimitIntervals(oddLimit);
+    let fracs = generateOddLimitFractions(oddLimit);
+    // Apply prime-limit as a filter if > 0
+    fracs = filterFractionsByPrimeLimit(fracs, primeLimit);
+    ji = fractionsToCents(fracs);
   } else {
     // Fallback to a minimal set if odd-limit not specified
     ji = [0, ratioToCents(5/4), ratioToCents(3/2)];
-  }
-
-  // Apply prime-limit as a filter if > 0
-  if (Number.isFinite(primeLimit) && primeLimit > 0) {
-    const lim = Math.floor(primeLimit);
-    const allowedPrimes = [2,3,5,7,11,13].filter(p => p <= lim);
-    // Filter by checking if a cent value can be closely approximated by a ratio whose prime factors are within allowedPrimes.
-    // We'll test small rational approximations around the cent value and keep if any fits.
-    const filtered = [];
-    for (const c of ji) {
-      if (c === 0) { filtered.push(c); continue; }
-      const target = Math.pow(2, c/1200);
-      // Try small-range rational searches using allowed primes exponents
-      let keep = false;
-      const bound = 8;
-      // include 2 to move octaves; but factor set must be subset of allowedPrimes
-      const primes = [2, ...allowedPrimes.filter(p => p !== 2)];
-      const exps = primes.map(() => 0);
-      function* enumVec(i=0){
-        if(i===primes.length){ yield [...exps]; return; }
-        for(let e=-bound;e<=bound;e++){ exps[i]=e; yield* enumVec(i+1);} }
-      for (const vec of enumVec()) {
-        let r = 1;
-        for (let i=0;i<primes.length;i++) r *= Math.pow(primes[i], vec[i]);
-        if (!Number.isFinite(r) || r<=0) continue;
-        // Map into [1,2)
-        let rOct = r;
-        while (rOct < 1) rOct *= 2;
-        while (rOct >= 2) rOct /= 2;
-        const cents = ratioToCents(rOct);
-        if (Math.abs(cents - c) < 0.5) { keep = true; break; }
-      }
-      if (keep) filtered.push(c);
-    }
-    ji = filtered;
   }
   // Manual entries
   ji = ji.concat(manual);
