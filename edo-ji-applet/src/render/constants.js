@@ -17,6 +17,7 @@ export const LAYOUT = {
   labelGap: 2,
   edoTopPad: 18,
   hPad: 12, // horizontal padding (px) so endpoints aren't cut off
+  centsRightBuffer: 50, // extra domain (in cents) to accommodate positive detune
   minBarAreaH: 10,
   minCanvas: 50,
 };

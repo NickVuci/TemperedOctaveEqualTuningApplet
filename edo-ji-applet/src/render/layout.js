@@ -17,11 +17,12 @@ export function computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabe
   }
   ctx.font = FONTS.label;
   const gap = LAYOUT.labelGap;
+  const domainCents = 1200 + LAYOUT.centsRightBuffer;
   let items = jiIntervals.map((c, i) => {
     const jiObj = jiData && jiData[i];
     const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
     if (!label) return null;
-    const x = mapCentsToX(c, width, LAYOUT.hPad);
+    const x = mapCentsToX(c, width, LAYOUT.hPad, domainCents);
     const w = ctx.measureText(label).width + 6;
     const l = x - w / 2, r = x + w / 2;
     let pr = 9999;

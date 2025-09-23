@@ -75,7 +75,7 @@ export function wireTooltip(els, getState) {
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
     const x = ev.clientX - rect.left;
-  const cents = mapXToCents(x, cssW, LAYOUT.hPad);
+  const cents = mapXToCents(x, cssW, LAYOUT.hPad, 1200 + LAYOUT.centsRightBuffer);
     const nearestEDO = nearestValue(state.edo, cents);
     const nearestJI = nearestValue(state.ji, cents);
     const diff = (nearestEDO !== undefined && nearestJI !== undefined) ? (nearestEDO - nearestJI) : undefined;

@@ -3,9 +3,13 @@
  * @param {number} cents
  * @param {number} width
  */
-export function mapCentsToX(cents, width, pad = 0) {
+/**
+ * Map cents to x with padding and a variable domain (default 1200 cents).
+ */
+export function mapCentsToX(cents, width, pad = 0, domainCents = 1200) {
   const innerW = Math.max(1, width - 2 * pad);
-  return pad + (cents / 1200) * innerW;
+  const d = Math.max(1, domainCents);
+  return pad + (cents / d) * innerW;
 }
 
 /**
@@ -13,9 +17,13 @@ export function mapCentsToX(cents, width, pad = 0) {
  * @param {number} x
  * @param {number} width
  */
-export function mapXToCents(x, width, pad = 0) {
+/**
+ * Inverse of mapCentsToX with the same padding and domain.
+ */
+export function mapXToCents(x, width, pad = 0, domainCents = 1200) {
   const innerW = Math.max(1, width - 2 * pad);
+  const d = Math.max(1, domainCents);
   const t = (x - pad) / innerW;
-  const cents = t * 1200;
-  return Math.min(1200, Math.max(0, cents));
+  const cents = t * d;
+  return Math.min(d, Math.max(0, cents));
 }
