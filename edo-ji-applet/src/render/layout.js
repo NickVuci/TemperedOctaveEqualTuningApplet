@@ -1,5 +1,6 @@
 import { maxPrimeFactor } from "../utils/math.js";
 import { LAYOUT, FONTS } from "./constants.js";
+import { mapCentsToX } from "./scale.js";
 
 // Compute multi-row assignment for JI labels so all display
 // Returns { rows, rowOf, lineH }
@@ -20,7 +21,7 @@ export function computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabe
     const jiObj = jiData && jiData[i];
     const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
     if (!label) return null;
-    const x = (c / 1200) * width;
+    const x = mapCentsToX(c, width, LAYOUT.hPad);
     const w = ctx.measureText(label).width + 6;
     const l = x - w / 2, r = x + w / 2;
     let pr = 9999;

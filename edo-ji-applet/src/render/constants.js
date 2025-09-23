@@ -16,6 +16,7 @@ export const LAYOUT = {
   jiLabelLineHeight: 14,
   labelGap: 2,
   edoTopPad: 18,
+  hPad: 12, // horizontal padding (px) so endpoints aren't cut off
   minBarAreaH: 10,
   minCanvas: 50,
 };

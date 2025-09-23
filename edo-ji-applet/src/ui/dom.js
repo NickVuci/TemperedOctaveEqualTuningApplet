@@ -1,6 +1,7 @@
 import { centsToNearestSimpleFraction } from "../utils/math.js";
 import { nearestIndex, nearestValue } from "../utils/array.js";
 import { mapXToCents } from "../render/scale.js";
+import { LAYOUT } from "../render/constants.js";
 
 /**
  * Query and return all required DOM elements and the canvas context.
@@ -74,7 +75,7 @@ export function wireTooltip(els, getState) {
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
     const x = ev.clientX - rect.left;
-  const cents = mapXToCents(x, cssW);
+  const cents = mapXToCents(x, cssW, LAYOUT.hPad);
     const nearestEDO = nearestValue(state.edo, cents);
     const nearestJI = nearestValue(state.ji, cents);
     const diff = (nearestEDO !== undefined && nearestJI !== undefined) ? (nearestEDO - nearestJI) : undefined;

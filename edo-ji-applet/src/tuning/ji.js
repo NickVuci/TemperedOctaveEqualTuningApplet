@@ -79,6 +79,8 @@ export function buildJI({ oddLimit, primeLimit, manualDetailed }) {
   if (Array.isArray(manualDetailed) && manualDetailed.length) {
     jiData = jiData.concat(manualDetailed);
   }
+  // Always include the octave 2/1 (1200 cents) so the end tick/label is visible
+  jiData.push({ cents: 1200, n: 2, d: 1, source: 'auto' });
   jiData = jiData.filter(o => Number.isFinite(o.cents) && o.cents >= 0 && o.cents <= 1200);
   jiData = uniqSortedJiData(jiData);
   if (jiData.length === 0) {

@@ -34,7 +34,7 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
       j++;
     }
     const nearest = jiIntervals.length ? jiIntervals[j] : 0;
-    const x = mapCentsToX(c, width);
+    const x = mapCentsToX(c, width, LAYOUT.hPad);
     const diff = c - nearest;
     ctx.fillStyle = getColorForDeviation(diff);
     ctx.fillRect(x, topRegionY, 2, barAreaH);
@@ -43,7 +43,7 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
   // JI bars (lower band)
   const jiXs = [];
   jiIntervals.forEach((c) => {
-    const x = mapCentsToX(c, width);
+    const x = mapCentsToX(c, width, LAYOUT.hPad);
     ctx.fillStyle = COLORS.jiBar;
     ctx.fillRect(x, bottomRegionY, 2, barAreaH);
     jiXs.push(x);
@@ -58,7 +58,7 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
     ctx.textBaseline = 'bottom';
     let lastRight = -Infinity;
     for (let i = 0; i < edoIntervals.length; i++) {
-      const x = (edoIntervals[i] / 1200) * width;
+      const x = mapCentsToX(edoIntervals[i], width, LAYOUT.hPad);
       const label = String(i);
       const w = ctx.measureText(label).width + 6;
       if (x - w / 2 > lastRight + 2) {
@@ -75,7 +75,7 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
       const jiObj = jiData[i];
       const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
       if (!label) continue;
-  const x = mapCentsToX(jiIntervals[i], width);
+      const x = mapCentsToX(jiIntervals[i], width, LAYOUT.hPad);
       const r = rowOf[i] || 0;
       const y = labelTopY + (r + 1) * lineH - 2;
       ctx.fillText(label, x, y);

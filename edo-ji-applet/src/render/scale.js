@@ -3,8 +3,9 @@
  * @param {number} cents
  * @param {number} width
  */
-export function mapCentsToX(cents, width) {
-  return (cents / 1200) * width;
+export function mapCentsToX(cents, width, pad = 0) {
+  const innerW = Math.max(1, width - 2 * pad);
+  return pad + (cents / 1200) * innerW;
 }
 
 /**
@@ -12,6 +13,9 @@ export function mapCentsToX(cents, width) {
  * @param {number} x
  * @param {number} width
  */
-export function mapXToCents(x, width) {
-  return (x / width) * 1200;
+export function mapXToCents(x, width, pad = 0) {
+  const innerW = Math.max(1, width - 2 * pad);
+  const t = (x - pad) / innerW;
+  const cents = t * 1200;
+  return Math.min(1200, Math.max(0, cents));
 }
