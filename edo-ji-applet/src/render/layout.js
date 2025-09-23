@@ -3,6 +3,11 @@ import { LAYOUT, FONTS } from "./constants.js";
 
 // Compute multi-row assignment for JI labels so all display
 // Returns { rows, rowOf, lineH }
+/**
+ * Compute multi-row label layout for JI fractions.
+ * @param {{ctx:CanvasRenderingContext2D,width:number,jiIntervals:number[],jiData:any[],showJiLabels:boolean}} args
+ * @returns {{rows:number,rowOf:number[],lineH:number}}
+ */
 export function computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels }) {
   const lineH = LAYOUT.jiLabelLineHeight;
   const rowOf = [];

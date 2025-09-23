@@ -1,5 +1,10 @@
 import { ratioToCents, normalizeOctaveFraction } from "../utils/math.js";
 
+/**
+ * Parse manual interval text into objects. Accepts 'n/d', '702', or '702c'.
+ * @param {string} text
+ * @returns {{cents:number,n?:number,d?:number,source:string}[]}
+ */
 export function parseManualIntervalsDetailed(text) {
   if (!text) return [];
   const out = [];

@@ -1,6 +1,11 @@
 import { ratioToCents, maxPrimeFactor, normalizeOctaveFraction } from "../utils/math.js";
 import { uniqSortedByCents } from "../utils/array.js";
 
+/**
+ * Generate reduced odd/odd fractions n/d <= oddLimit within [1,2) domain intent.
+ * @param {number} [oddLimit=7]
+ * @returns {Array<[number,number]>}
+ */
 export function generateOddLimitFractions(oddLimit = 7) {
   let lim = Math.max(1, Math.floor(oddLimit));
   if (lim % 2 === 0) lim -= 1;
@@ -16,12 +21,22 @@ export function generateOddLimitFractions(oddLimit = 7) {
   return fracs;
 }
 
+/**
+ * Filter fractions by prime limit such that max prime factor of n and d <= limit.
+ * @param {Array<[number,number]>} fracs
+ * @param {number} primeLimit
+ */
 export function filterFractionsByPrimeLimit(fracs, primeLimit) {
   if (!Number.isFinite(primeLimit) || primeLimit <= 0) return fracs;
   const lim = Math.floor(primeLimit);
   return fracs.filter(([n, d]) => maxPrimeFactor(n) <= lim && maxPrimeFactor(d) <= lim);
 }
 
+/**
+ * Convert list of fractions to cents with normalized n/d in [1,2).
+ * @param {Array<[number,number]>} fracs
+ * @returns {{cents:number,n:number,d:number,source:string}[]}
+ */
 export function fractionsToCents(fracs) {
   const out = [];
   for (const [rawN, rawD] of fracs) {
@@ -34,10 +49,20 @@ export function fractionsToCents(fracs) {
   return out;
 }
 
+/**
+ * Deduplicate and sort JI data by cents.
+ * @param {{cents:number,n?:number,d?:number,source?:string}[]} items
+ * @param {number} [epsilon=0.5]
+ */
 export function uniqSortedJiData(items, epsilon = 0.5) {
   return uniqSortedByCents(items, epsilon);
 }
 
+/**
+ * Build the final JI dataset from odd/prime limits and manual entries.
+ * @param {{oddLimit:number, primeLimit:number, manualDetailed:Array<{cents:number,n?:number,d?:number}>}} params
+ * @returns {{cents:number,n?:number,d?:number,source?:string}[]}
+ */
 export function buildJI({ oddLimit, primeLimit, manualDetailed }) {
   let jiData = [];
   if (Number.isFinite(oddLimit) && oddLimit > 0) {

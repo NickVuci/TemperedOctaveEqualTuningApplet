@@ -1,5 +1,6 @@
 import { COLORS, FONTS, LAYOUT } from "./constants.js";
 import { computeJiLabelRows } from "./layout.js";
+import { mapCentsToX } from "./scale.js";
 
 function getColorForDeviation(diff) {
   const absDiff = Math.abs(diff);
@@ -10,6 +11,11 @@ function getColorForDeviation(diff) {
   return COLORS.far;
 }
 
+/**
+ * Draw the EDO and JI rulers onto the canvas.
+ * @param {{ctx:CanvasRenderingContext2D,width:number,height:number,jiIntervals:number[],jiData:any[],edoIntervals:number[],showEdoLabels:boolean,showJiLabels:boolean}} args
+ * @returns {{jiPixelXs:number[],jiRows:number,jiLineH:number}}
+ */
 export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels, showJiLabels }) {
   ctx.clearRect(0, 0, width, height);
 
@@ -20,19 +26,24 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
   const topRegionY = topPad;
   const bottomRegionY = topPad + barAreaH;
 
-  // EDO bars (upper band)
-  edoIntervals.forEach((c) => {
-    const x = (c / 1200) * width;
-    const nearest = jiIntervals.reduce((a, b) => Math.abs(b - c) < Math.abs(a - c) ? b : a, jiIntervals[0] ?? 0);
+  // EDO bars (upper band) using two-pointer sweep for nearest JI
+  let j = 0;
+  for (let i = 0; i < edoIntervals.length; i++) {
+    const c = edoIntervals[i];
+    while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - c) <= Math.abs(jiIntervals[j] - c)) {
+      j++;
+    }
+    const nearest = jiIntervals.length ? jiIntervals[j] : 0;
+    const x = mapCentsToX(c, width);
     const diff = c - nearest;
     ctx.fillStyle = getColorForDeviation(diff);
     ctx.fillRect(x, topRegionY, 2, barAreaH);
-  });
+  }
 
   // JI bars (lower band)
   const jiXs = [];
   jiIntervals.forEach((c) => {
-    const x = (c / 1200) * width;
+    const x = mapCentsToX(c, width);
     ctx.fillStyle = COLORS.jiBar;
     ctx.fillRect(x, bottomRegionY, 2, barAreaH);
     jiXs.push(x);
@@ -64,7 +75,7 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
       const jiObj = jiData[i];
       const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
       if (!label) continue;
-      const x = (jiIntervals[i] / 1200) * width;
+  const x = mapCentsToX(jiIntervals[i], width);
       const r = rowOf[i] || 0;
       const y = labelTopY + (r + 1) * lineH - 2;
       ctx.fillText(label, x, y);

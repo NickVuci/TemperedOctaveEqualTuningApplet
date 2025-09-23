@@ -1,9 +1,19 @@
 // Math and ratio helpers
 
+/**
+ * Convert a frequency ratio to cents (assuming 1200 cents per octave).
+ * @param {number} ratio
+ * @returns {number} cents
+ */
 export function ratioToCents(ratio) {
   return 1200 * Math.log2(ratio);
 }
 
+/**
+ * Greatest common divisor of two integers (non-negative).
+ * @param {number} a
+ * @param {number} b
+ */
 export function gcd(a, b) {
   let x = Math.trunc(Math.abs(a || 0));
   let y = Math.trunc(Math.abs(b || 0));
@@ -17,6 +27,11 @@ export function gcd(a, b) {
   return Math.abs(x) || 1;
 }
 
+/**
+ * Maximum prime factor of a positive integer.
+ * @param {number} n
+ * @returns {number}
+ */
 export function maxPrimeFactor(n) {
   if (n <= 1) return 1;
   let num = Math.trunc(Math.abs(n));
@@ -30,6 +45,12 @@ export function maxPrimeFactor(n) {
 }
 
 // Normalize a rational n/d into the [1, 2) octave band as integers, with reduction
+/**
+ * Normalize rational n/d into [1,2) by powers of 2 and reduce to lowest terms.
+ * @param {number} n
+ * @param {number} d
+ * @returns {{n:number,d:number}}
+ */
 export function normalizeOctaveFraction(n, d) {
   if (!Number.isFinite(n) || !Number.isFinite(d) || d === 0) return { n: n || 1, d: d || 1 };
   n = Math.trunc(n);
@@ -43,6 +64,12 @@ export function normalizeOctaveFraction(n, d) {
 }
 
 // Continued fraction approximation for real numbers
+/**
+ * Approximate a real number with a fraction using continued fractions.
+ * @param {number} x
+ * @param {number} [maxDen=512]
+ * @returns {[number, number]} numerator, denominator
+ */
 export function approximateFraction(x, maxDen = 512) {
   let h1 = 1, k1 = 0, h0 = 0, k0 = 1;
   let a = Math.floor(x);
@@ -60,6 +87,11 @@ export function approximateFraction(x, maxDen = 512) {
   return [h, k];
 }
 
+/**
+ * Given cents within an octave, return a simple normalized fraction [n,d].
+ * @param {number} cents
+ * @returns {[number, number]}
+ */
 export function centsToNearestSimpleFraction(cents) {
   const r = Math.pow(2, cents / 1200);
   const [n0, d0] = approximateFraction(r, 512);

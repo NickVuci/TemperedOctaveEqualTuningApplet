@@ -1,6 +1,10 @@
 import { centsToNearestSimpleFraction } from "../utils/math.js";
 import { nearestIndex, nearestValue } from "../utils/array.js";
+import { mapXToCents } from "../render/scale.js";
 
+/**
+ * Query and return all required DOM elements and the canvas context.
+ */
 export function getElements() {
   const canvas = document.getElementById("visualizer");
   const ctx = canvas.getContext("2d");
@@ -23,6 +27,9 @@ export function getElements() {
   };
 }
 
+/**
+ * Read UI control values into a typed object.
+ */
 export function readControls(els) {
   const edo = parseInt(els.edoInput.value);
   const detune = parseFloat(els.octaveDetuneInput.value) || 0;
@@ -41,16 +48,25 @@ export function readControls(els) {
   };
 }
 
+/**
+ * Attach input listeners to trigger debounced updates.
+ */
 export function wireControls(onChange) {
   document.querySelectorAll("input, textarea").forEach(el => el.addEventListener("input", onChange));
 }
 
+/**
+ * Update the "Octave: ... c" label.
+ */
 export function updateOctaveDisplay(els, octaveCents) {
   if (els.octaveTotalDisplay) {
     els.octaveTotalDisplay.textContent = `Octave: ${octaveCents.toFixed(2)} c`;
   }
 }
 
+/**
+ * Wire up mousemove/leave events to show a tooltip with nearest EDO/JI info.
+ */
 export function wireTooltip(els, getState) {
   const { canvas, tooltip } = els;
   canvas.addEventListener("mousemove", (ev) => {
@@ -58,7 +74,7 @@ export function wireTooltip(els, getState) {
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
     const x = ev.clientX - rect.left;
-    const cents = (x / cssW) * 1200;
+  const cents = mapXToCents(x, cssW);
     const nearestEDO = nearestValue(state.edo, cents);
     const nearestJI = nearestValue(state.ji, cents);
     const diff = (nearestEDO !== undefined && nearestJI !== undefined) ? (nearestEDO - nearestJI) : undefined;
@@ -85,6 +101,9 @@ export function wireTooltip(els, getState) {
   canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
 }
 
+/**
+ * Wire click selection to pick a JI tick and the match-EDO button to retune octave.
+ */
 export function wireSelection(els, getState, setDetune) {
   const { canvas, showEdoLabelsEl, showJiLabelsEl, selectionPanel, selectedJiLabel, matchEdoBtn, edoInput } = els;
   let selectedJi = null;

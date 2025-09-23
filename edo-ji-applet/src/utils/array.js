@@ -1,10 +1,23 @@
 // Array/search helpers
 
+/**
+ * Return the value in arr with minimum absolute difference from target.
+ * @template T extends number
+ * @param {T[]} arr
+ * @param {number} target
+ * @returns {T|undefined}
+ */
 export function nearestValue(arr, target) {
   if (!arr || arr.length === 0) return undefined;
   return arr.reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a), arr[0]);
 }
 
+/**
+ * Return the index of the value in arr nearest to target.
+ * @param {number[]} arr
+ * @param {number} target
+ * @returns {number}
+ */
 export function nearestIndex(arr, target) {
   if (!arr || arr.length === 0) return -1;
   let idx = 0;
@@ -16,6 +29,12 @@ export function nearestIndex(arr, target) {
   return idx;
 }
 
+/**
+ * Deduplicate items sorted by .cents with a threshold epsilon.
+ * Prefers items that contain n/d over those without.
+ * @param {{cents:number,n?:number,d?:number}[]} items
+ * @param {number} [epsilon=0.5]
+ */
 export function uniqSortedByCents(items, epsilon = 0.5) {
   const sorted = [...items].sort((a, b) => a.cents - b.cents);
   const out = [];
