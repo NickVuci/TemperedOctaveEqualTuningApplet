@@ -85,6 +85,15 @@ function queuedUpdate() {
 // Init
 applyPersistedContainerSize();
 wireControls(queuedUpdate);
+// When EDO changes, reset octave detune back to 0 cents
+if (els.edoInput && els.octaveDetuneInput) {
+  els.edoInput.addEventListener('input', () => {
+    if (els.octaveDetuneInput.value !== '0') {
+      els.octaveDetuneInput.value = '0';
+      els.octaveDetuneInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+}
 wireTooltip(els, getState);
 wireSelection(els, getState, (detune) => {
   if (els.octaveDetuneInput) {
