@@ -4,8 +4,8 @@ A simple client-side HTML/JS applet to visualize Just Intonation (JI) intervals 
 
 ## Features
 - Adjustable EDO (number of equal steps per octave)
-- Adjustable octave size (in cents) for stretch/compression
-- Generate JI sets by odd-limit and prime-limit
+- Octave detuning (± cents) with live total octave display (1200 + detuning)
+- Generate JI sets by odd-limit (odd-only) and optional prime-limit filtering
 - Enter manual intervals as fractions (e.g., `3/2`) or cents (e.g., `702`)
 - Color-coded EDO ticks by deviation from nearest JI interval
 
@@ -16,7 +16,9 @@ A simple client-side HTML/JS applet to visualize Just Intonation (JI) intervals 
 
 Notes:
 - Manual intervals accept comma/space-separated values. Fractions are converted to cents; plain numbers are interpreted as cents.
-- If both odd-limit and prime-limit are blank and manual list is empty, a default JI set (3/2, 5/4, 7/4) is shown.
+- Odd-limit input is odd-only; even entries are rounded down to the nearest odd. The set consists of reduced odd/odd ratios n/d (n,d odd ≤ odd-limit), mapped into [1, 2), plus 1/1.
+- Prime-limit is optional: when > 0, it filters the odd-limit set to those intervals whose ratios can be expressed using only primes ≤ prime-limit (within a small tolerance); when 0, no filtering is done.
+- Deviations are shown to two decimal places; tiny deviations (< 0.01c) are treated as zero for coloring.
 
 ## Development
 All logic lives in `script.js`. The canvas draws two horizontal rulers:
