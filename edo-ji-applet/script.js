@@ -124,7 +124,7 @@ function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
 
   // Bars
   const jiXs = [];
-  // EDO bars
+  // EDO bars (upper band)
   edoIntervals.forEach((c) => {
     const x = (c / 1200) * width;
     const nearest = jiIntervals.reduce((a, b) => Math.abs(b - c) < Math.abs(a - c) ? b : a, jiIntervals[0] ?? 0);
@@ -133,7 +133,7 @@ function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
     ctx.fillRect(x, topRegionY, 2, barAreaH);
   });
 
-  // JI bars
+  // JI bars (lower band)
   jiIntervals.forEach((c) => {
     const x = (c / 1200) * width;
     ctx.fillStyle = 'blue';
@@ -142,7 +142,7 @@ function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
   });
   lastDraw.jiPixelXs = jiXs;
 
-  // Optional labels with overlap handling
+  // Labels
   ctx.font = '12px Arial';
   ctx.fillStyle = '#000';
   ctx.textAlign = 'center';
@@ -163,13 +163,15 @@ function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
 
   if (showJiLabels && jiRows > 0) {
     ctx.textBaseline = 'bottom';
+    // Row 0 is closest to the JI bars; rows increase going downward
+    const labelTopY = bottomRegionY + barAreaH;
     for (let i = 0; i < jiIntervals.length; i++) {
       const jiObj = lastState.jiData[i];
       const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
       if (!label) continue;
       const x = (jiIntervals[i] / 1200) * width;
       const r = jiRowOf[i] || 0;
-      const y = height - 2 - r * lineH;
+      const y = labelTopY + (r + 1) * lineH - 2;
       ctx.fillText(label, x, y);
     }
   }
@@ -191,39 +193,60 @@ const showJiLabelsEl = document.getElementById("showJiLabels");
 function computeJiLabelRows(width) {
   const showJiLabels = !!(showJiLabelsEl && showJiLabelsEl.checked);
   const lineH = 14; // px per row
-  const rowGap = 0;
   const rowOf = [];
   if (!showJiLabels || !lastState || !lastState.ji || !lastState.ji.length) {
     return { rows: 0, rowOf, lineH };
   }
-  // Precompute label strings and widths
+  // Build items with geometry and priority
   ctx.font = '12px Arial';
-  const items = lastState.ji.map((c, i) => {
+  const gap = 2; // min gap between labels
+  let items = lastState.ji.map((c, i) => {
     const jiObj = lastState.jiData[i];
     const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
+    if (!label) return null;
     const x = (c / 1200) * width;
-    const w = label ? (ctx.measureText(label).width + 6) : 0;
-    return { i, x, w, label };
-  }).filter(it => it.label);
-  // Greedy stacking into rows without overlap
-  const lastRights = []; // lastRight per row
-  for (const it of items) {
-    let placed = false;
-    for (let r = 0; r < lastRights.length; r++) {
-      if (it.x - it.w / 2 > lastRights[r] + 2) {
-        rowOf[it.i] = r;
-        lastRights[r] = it.x + it.w / 2;
-        placed = true;
-        break;
+    const w = ctx.measureText(label).width + 6;
+    const l = x - w / 2, r = x + w / 2;
+    let pr = 9999;
+    if (jiObj && jiObj.n && jiObj.d) pr = Math.max(maxPrimeFactor(jiObj.n), maxPrimeFactor(jiObj.d));
+    return { i, x, w, l, r, pr };
+  }).filter(Boolean);
+  if (items.length === 0) return { rows: 0, rowOf, lineH };
+
+  // Sort by left bound for stable sweep
+  items.sort((a, b) => (a.l - b.l) || (a.pr - b.pr));
+
+  let rows = 0;
+  while (items.length) {
+    rows++;
+    const placed = [];
+    let lastRight = -Infinity;
+    for (let k = 0; k < items.length; k++) {
+      const it = items[k];
+      if (it.l > lastRight + gap) {
+        // fits, place it
+        placed.push(it);
+        lastRight = it.r;
+      } else {
+        // overlaps with last placed; keep higher priority (smaller pr)
+        const prev = placed[placed.length - 1];
+        if (prev && it.pr < prev.pr) {
+          // replace previous with this higher-priority label in this row
+          placed[placed.length - 1] = it;
+          lastRight = it.r;
+          // keep prev for lower rows by leaving it in remaining pool
+        } else {
+          // keep current for lower row (do nothing here)
+        }
       }
     }
-    if (!placed) {
-      const r = lastRights.length;
-      rowOf[it.i] = r;
-      lastRights.push(it.x + it.w / 2);
-    }
+    // Assign row number for placed items
+    for (const p of placed) rowOf[p.i] = rows - 1;
+    // Remove placed from items to form next rows
+    const placedSet = new Set(placed.map(p => p.i));
+    items = items.filter(it => !placedSet.has(it.i));
   }
-  return { rows: lastRights.length, rowOf, lineH };
+  return { rows, rowOf, lineH };
 }
 
 function resizeCanvasToContainer() {
