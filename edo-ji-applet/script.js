@@ -1,0 +1,260 @@
+// --- Core helpers ---
+function ratioToCents(ratio) {
+  return 1200 * Math.log2(ratio);
+}
+
+function generateEDOIntervals(edo, octaveCents) {
+  const e = Number.isFinite(edo) && edo > 0 ? Math.floor(edo) : 12;
+  const oct = Number.isFinite(octaveCents) ? octaveCents : 1200;
+  const step = oct / e;
+  return Array.from({ length: e + 1 }, (_, i) => i * step);
+}
+
+function getColorForDeviation(diff) {
+  const absDiff = Math.abs(diff);
+  if (absDiff === 0) return "green";
+  if (absDiff <= 1) return "yellow";
+  if (absDiff <= 5) return "orange";
+  if (absDiff <= 10) return "red";
+  return "black";
+}
+
+// --- JI generators & parsing ---
+function parseManualIntervals(text) {
+  if (!text) return [];
+  const out = [];
+  const parts = text
+    .split(/[\s,;]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  for (const token of parts) {
+    // fraction e.g. 3/2
+    if (/^\d+\s*\/\s*\d+$/.test(token)) {
+      const [n, d] = token.split("/").map(v => parseFloat(v));
+      if (d !== 0 && Number.isFinite(n) && Number.isFinite(d)) {
+        out.push(ratioToCents(n / d));
+      }
+      continue;
+    }
+    // explicit cents with suffix
+    if (/^[-+]?\d+(?:\.\d+)?\s*(?:c|cent|cents|¢)$/i.test(token)) {
+      const num = parseFloat(token);
+      if (Number.isFinite(num)) out.push(num);
+      continue;
+    }
+    // plain number -> assume cents
+    const num = parseFloat(token);
+    if (Number.isFinite(num)) out.push(num);
+  }
+  return out;
+}
+
+function uniqSortedCents(centsArray, epsilon = 0.5) {
+  const sorted = [...centsArray].sort((a, b) => a - b);
+  const out = [];
+  for (const c of sorted) {
+    if (out.length === 0 || Math.abs(c - out[out.length - 1]) > epsilon) {
+      out.push(c);
+    }
+  }
+  return out;
+}
+
+function generateOddLimitIntervals(oddLimit = 7) {
+  const lim = Math.max(1, Math.floor(oddLimit));
+  const vals = new Set();
+  // Include some common JI first
+  [1/1, 16/15, 9/8, 6/5, 5/4, 4/3, 7/5, 3/2, 8/5, 5/3, 7/4, 15/8, 2/1].forEach(r => {
+    const c = ratioToCents(r);
+    if (c >= 0 && c <= 1200) vals.add(Math.round(c * 1000) / 1000);
+  });
+  // Generate all reduced odd/odd ratios n/d with n,d odd <= lim, between 1 and 2
+  function gcd(a, b) { return b ? gcd(b, a % b) : Math.abs(a); }
+  for (let n = 1; n <= lim; n += 2) {
+    for (let d = 1; d <= lim; d += 2) {
+      if (gcd(n, d) !== 1) continue;
+      const r = n / d;
+      if (r <= 0) continue;
+      // Map into [1,2)
+      let rOct = r;
+      while (rOct < 1) rOct *= 2;
+      while (rOct >= 2) rOct /= 2;
+      const c = ratioToCents(rOct);
+      if (c >= 0 && c <= 1200) vals.add(Math.round(c * 1000) / 1000);
+    }
+  }
+  return Array.from(vals).sort((a, b) => a - b);
+}
+
+function generatePrimeLimitIntervals(primeLimit = 5) {
+  const lim = Math.max(2, Math.floor(primeLimit));
+  const primes = [2, 3, 5, 7, 11, 13].filter(p => p <= lim);
+  const vals = new Set();
+  // Exponent search within small bounds to avoid explosion
+  // Adapt bound based on number of primes to keep combinations reasonable
+  let bound = 4;
+  if (primes.length >= 6) bound = 2; // up to ~5k combos
+  else if (primes.length >= 5) bound = 3; // up to ~16k combos
+  const exps = primes.map(() => 0);
+
+  function* enumerate(idx = 0) {
+    if (idx === primes.length) {
+      yield [...exps];
+      return;
+    }
+    for (let e = -bound; e <= bound; e++) {
+      exps[idx] = e;
+      yield* enumerate(idx + 1);
+    }
+  }
+
+  for (const vec of enumerate()) {
+    // Skip all-zero
+    if (vec.every(e => e === 0)) continue;
+    let r = 1;
+    for (let i = 0; i < primes.length; i++) {
+      r *= Math.pow(primes[i], vec[i]);
+      if (!Number.isFinite(r) || r === 0) break;
+    }
+    if (!Number.isFinite(r) || r <= 0) continue;
+    // Map into [1,2)
+    while (r < 1) r *= 2;
+    while (r >= 2) r /= 2;
+    const c = ratioToCents(r);
+    if (c >= 0 && c <= 1200) vals.add(Math.round(c * 1000) / 1000);
+  }
+
+  return Array.from(vals).sort((a, b) => a - b);
+}
+
+// --- Drawing ---
+function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
+  ctx.clearRect(0, 0, width, height);
+
+  // Draw JI intervals (bottom line)
+  ctx.strokeStyle = "blue";
+  ctx.beginPath();
+  ctx.moveTo(0, height - 20);
+  ctx.lineTo(width, height - 20);
+  ctx.stroke();
+  jiIntervals.forEach(c => {
+    const x = (c / 1200) * width;
+    ctx.fillStyle = "blue";
+    ctx.fillRect(x, height - 30, 2, 10);
+  });
+
+  // Draw EDO intervals (top line)
+  ctx.strokeStyle = "black";
+  ctx.beginPath();
+  ctx.moveTo(0, 20);
+  ctx.lineTo(width, 20);
+  ctx.stroke();
+  edoIntervals.forEach(c => {
+    const x = (c / 1200) * width;
+    const nearest = jiIntervals.reduce((a, b) => Math.abs(b - c) < Math.abs(a - c) ? b : a, jiIntervals[0] ?? 0);
+    const diff = c - nearest;
+    ctx.fillStyle = getColorForDeviation(diff);
+    ctx.fillRect(x, 10, 2, 10);
+  });
+}
+
+// --- Wiring ---
+const canvas = document.getElementById("visualizer");
+const ctx = canvas.getContext("2d");
+const tooltip = document.getElementById("tooltip");
+
+let lastState = {
+  ji: [],
+  edo: [],
+  octave: 1200,
+};
+
+function buildJI() {
+  const oddLimit = parseInt(document.getElementById("oddLimitInput").value);
+  const primeLimit = parseInt(document.getElementById("primeLimitInput").value);
+  const manual = parseManualIntervals(document.getElementById("manualIntervals").value);
+
+  let ji = [];
+  // From limits
+  if (Number.isFinite(oddLimit) && oddLimit > 0) {
+    ji = ji.concat(generateOddLimitIntervals(oddLimit));
+  }
+  if (Number.isFinite(primeLimit) && primeLimit >= 2) {
+    ji = ji.concat(generatePrimeLimitIntervals(primeLimit));
+  }
+  // Manual entries
+  ji = ji.concat(manual);
+
+  // Fallback defaults if empty
+  if (ji.length === 0) {
+    ji = [ratioToCents(3/2), ratioToCents(5/4), ratioToCents(7/4)];
+  }
+
+  // Keep within [0,1200], unique and sorted
+  ji = ji.filter(c => Number.isFinite(c) && c >= 0 && c <= 1200);
+  ji = uniqSortedCents(ji);
+  return ji;
+}
+
+function update() {
+  const edo = parseInt(document.getElementById("edoInput").value);
+  const octaveCents = parseFloat(document.getElementById("octaveInput").value);
+
+  const jiIntervals = buildJI();
+  const edoIntervals = generateEDOIntervals(edo, octaveCents);
+  drawRulers(ctx, jiIntervals, edoIntervals, canvas.width, canvas.height);
+
+  lastState = { ji: jiIntervals, edo: edoIntervals, octave: octaveCents };
+}
+
+// Debounce updates to stay responsive when inputs change rapidly
+let updateTimer = null;
+function queuedUpdate() {
+  if (updateTimer) clearTimeout(updateTimer);
+  updateTimer = setTimeout(() => {
+    update();
+    updateTimer = null;
+  }, 80);
+}
+
+document.querySelectorAll("input, textarea").forEach(el => el.addEventListener("input", queuedUpdate));
+
+update();
+
+// --- Hover tooltip ---
+function nearestValue(arr, target) {
+  if (!arr || arr.length === 0) return undefined;
+  return arr.reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a), arr[0]);
+}
+
+canvas.addEventListener("mousemove", (ev) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = ev.clientX - rect.left;
+  const y = ev.clientY - rect.top;
+  const cents = (x / canvas.width) * 1200;
+
+  const nearestEDO = nearestValue(lastState.edo, cents);
+  const nearestJI = nearestValue(lastState.ji, cents);
+  const diff = nearestEDO !== undefined && nearestJI !== undefined ? (nearestEDO - nearestJI) : undefined;
+
+  if (nearestEDO === undefined) {
+    tooltip.style.display = "none";
+    return;
+  }
+
+  let html = `Cents: ${cents.toFixed(2)}`;
+  html += `<br/>Nearest EDO: ${nearestEDO.toFixed(2)}c`;
+  if (nearestJI !== undefined) {
+    html += `<br/>Nearest JI: ${nearestJI.toFixed(2)}c`;
+    html += `<br/>Deviation: ${(diff).toFixed(2)}c`;
+  }
+
+  tooltip.innerHTML = html;
+  tooltip.style.left = `${ev.clientX}px`;
+  tooltip.style.top = `${ev.clientY}px`;
+  tooltip.style.display = "block";
+});
+
+canvas.addEventListener("mouseleave", () => {
+  tooltip.style.display = "none";
+});

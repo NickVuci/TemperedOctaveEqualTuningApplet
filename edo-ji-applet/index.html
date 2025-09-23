@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JI vs EDO Visualizer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    canvas { border: 1px solid black; margin-top: 20px; }
+    .controls { margin-bottom: 20px; }
+    label { display: block; margin-top: 10px; }
+    .row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .row > label { min-width: 220px; }
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: none;
+      max-width: 320px;
+      white-space: nowrap;
+      transform: translate(10px, 10px);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <h1>JI vs EDO Visualizer</h1>
+  <div class="controls">
+    <div class="row">
+      <label>EDO: <input type="number" id="edoInput" value="12" min="1" /></label>
+      <label>Octave Size (cents): <input type="number" id="octaveInput" value="1200" step="1" /></label>
+      <label>Odd Limit: <input type="number" id="oddLimitInput" value="7" min="1" /></label>
+      <label>Prime Limit: <input type="number" id="primeLimitInput" value="5" min="2" /></label>
+    </div>
+    <label>Manual Intervals (comma separated, e.g. 3/2, 5/4, 7/4 or cents like 702):</label>
+    <textarea id="manualIntervals" rows="3" cols="80"></textarea>
+  </div>
+
+  <canvas id="visualizer" width="1000" height="220"></canvas>
+  <div id="tooltip" class="tooltip"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
