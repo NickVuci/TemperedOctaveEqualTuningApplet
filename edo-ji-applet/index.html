@@ -6,7 +6,7 @@
   <title>JI vs EDO Visualizer</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    canvas { border: 1px solid black; margin-top: 20px; }
+    canvas { display: block; }
     .controls { margin-bottom: 20px; }
     label { display: block; margin-top: 10px; }
     .row { display: flex; gap: 20px; flex-wrap: wrap; }
@@ -24,6 +24,15 @@
       white-space: nowrap;
       transform: translate(10px, 10px);
       z-index: 1000;
+    }
+    /* Make the canvas container resizable like the textarea */
+    .resizable {
+      resize: both;
+      overflow: hidden; /* no scrollbars; canvas will be sized to fit */
+      display: inline-block;
+      border: 1px solid #000;
+      margin-top: 20px;
+      box-sizing: border-box;
     }
   </style>
 </head>
@@ -43,7 +52,9 @@
     <textarea id="manualIntervals" rows="3" cols="80"></textarea>
   </div>
 
-  <canvas id="visualizer" width="1000" height="220"></canvas>
+  <div id="canvasContainer" class="resizable" style="width: 1000px; height: 240px;">
+    <canvas id="visualizer"></canvas>
+  </div>
   <div id="tooltip" class="tooltip"></div>
   <div id="selectionPanel" style="margin-top:12px; display:none;">
     <span id="selectedJiLabel" style="margin-right:12px; font-weight:600;"></span>

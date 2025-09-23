@@ -127,6 +127,40 @@ const octaveTotalDisplay = document.getElementById("octaveTotalDisplay");
 const selectionPanel = document.getElementById("selectionPanel");
 const selectedJiLabel = document.getElementById("selectedJiLabel");
 const matchEdoBtn = document.getElementById("matchEdoBtn");
+const canvasContainer = document.getElementById("canvasContainer");
+
+function resizeCanvasToContainer() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvasContainer.getBoundingClientRect();
+  // Account for container borders (1px each side). Use getComputedStyle for robustness.
+  const cs = getComputedStyle(canvasContainer);
+  const bwL = parseFloat(cs.borderLeftWidth) || 0;
+  const bwR = parseFloat(cs.borderRightWidth) || 0;
+  const bwT = parseFloat(cs.borderTopWidth) || 0;
+  const bwB = parseFloat(cs.borderBottomWidth) || 0;
+  const innerW = Math.max(50, Math.floor(rect.width - bwL - bwR));
+  const innerH = Math.max(50, Math.floor(rect.height - bwT - bwB));
+  // Set CSS size for layout (no overflow)
+  canvas.style.width = innerW + 'px';
+  canvas.style.height = innerH + 'px';
+  // Set actual pixel buffer size for crisp rendering
+  canvas.width = Math.floor(innerW * dpr);
+  canvas.height = Math.floor(innerH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Redraw with new dimensions (use CSS pixels in draw)
+  if (lastState && lastState.ji && lastState.edo) {
+    drawRulers(ctx, lastState.ji, lastState.edo, innerW, innerH);
+  } else {
+    update();
+  }
+}
+
+// Observe container resize
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => resizeCanvasToContainer());
+  ro.observe(canvasContainer);
+}
+window.addEventListener('resize', resizeCanvasToContainer);
 
 let lastState = { ji: [], jiData: [], edo: [], octave: 1200, edoCount: 12 };
 
@@ -153,19 +187,28 @@ function update() {
   const detune = parseFloat(document.getElementById("octaveDetuneInput").value) || 0;
   const octaveCents = 1200 + detune; if (octaveTotalDisplay) octaveTotalDisplay.textContent = `Octave: ${octaveCents.toFixed(2)} c`;
   const jiData = buildJI(); const jiIntervals = jiData.map(o => o.cents); const edoIntervals = generateEDOIntervals(edo, octaveCents);
-  drawRulers(ctx, jiIntervals, edoIntervals, canvas.width, canvas.height);
+  const rect = canvas.getBoundingClientRect();
+  const cssW = Math.max(50, Math.floor(rect.width));
+  const cssH = Math.max(50, Math.floor(rect.height));
+  drawRulers(ctx, jiIntervals, edoIntervals, cssW, cssH);
   lastState = { ji: jiIntervals, jiData, edo: edoIntervals, octave: octaveCents, edoCount: edo };
 }
 
 let updateTimer = null; function queuedUpdate() { if (updateTimer) clearTimeout(updateTimer); updateTimer = setTimeout(() => { update(); updateTimer = null; }, 80); }
 document.querySelectorAll("input, textarea").forEach(el => el.addEventListener("input", queuedUpdate));
+
+// Initialize sizing and first render
+resizeCanvasToContainer();
 update();
 
 // Tooltip
 function nearestValue(arr, target) { if (!arr || arr.length === 0) return undefined; return arr.reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a), arr[0]); }
 function nearestIndex(arr, target) { if (!arr || arr.length === 0) return -1; let idx = 0; let best = Math.abs(arr[0] - target); for (let i = 1; i < arr.length; i++) { const d = Math.abs(arr[i] - target); if (d < best) { best = d; idx = i; } } return idx; }
 canvas.addEventListener("mousemove", (ev) => {
-  const rect = canvas.getBoundingClientRect(); const x = ev.clientX - rect.left; const cents = (x / canvas.width) * 1200;
+  const rect = canvas.getBoundingClientRect();
+  const cssW = rect.width; const cssH = rect.height;
+  const x = ev.clientX - rect.left;
+  const cents = (x / cssW) * 1200;
   const nearestEDO = nearestValue(lastState.edo, cents); const nearestJI = nearestValue(lastState.ji, cents); const diff = nearestEDO !== undefined && nearestJI !== undefined ? (nearestEDO - nearestJI) : undefined;
   if (nearestEDO === undefined) { tooltip.style.display = "none"; return; }
   let html = `Cents: ${cents.toFixed(2)}`;
@@ -180,5 +223,12 @@ canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; })
 function approximateFraction(x, maxDen = 512) { let h1 = 1, k1 = 0, h0 = 0, k0 = 1; let a = Math.floor(x); let x1 = x; let h = a*h1 + h0, k = a*k1 + k0; let iter = 0; while (k <= maxDen && Math.abs(x - h/k) > 1e-12 && iter < 64) { x1 = 1/(x1 - a); a = Math.floor(x1); h0 = h1; k0 = k1; h1 = h; k1 = k; h = a*h1 + h0; k = a*k1 + k0; iter++; } if (k > maxDen) { h = h1; k = k1; } return [h, k]; }
 function centsToNearestSimpleFraction(cents) { const r = Math.pow(2, cents/1200); const [n0, d0] = approximateFraction(r, 512); function gcd(a,b){return b?gcd(b,a%b):Math.abs(a);} const g=gcd(n0,d0); const n1 = Math.round(n0/g), d1 = Math.round(d0/g); const norm = normalizeOctaveFraction(n1, d1); return [norm.n, norm.d]; }
 let selectedJi = null;
-canvas.addEventListener("click", (ev) => { const rect = canvas.getBoundingClientRect(); const x = ev.clientX - rect.left; const y = ev.clientY - rect.top; if (y < canvas.height / 2 || y > canvas.height) return; const jiXs = lastDraw.jiPixelXs || []; if (!jiXs.length || !lastState.ji.length) return; let bestIdx = 0, bestDx = Infinity; for (let i = 0; i < jiXs.length; i++) { const dx = Math.abs(jiXs[i] - x); if (dx < bestDx) { bestDx = dx; bestIdx = i; } } if (bestDx > 6) return; selectedJi = lastState.ji[bestIdx]; const jiObj = lastState.jiData[bestIdx]; const [an, ad] = jiObj && jiObj.n && jiObj.d ? [jiObj.n, jiObj.d] : centsToNearestSimpleFraction(selectedJi); if (selectedJiLabel) { selectedJiLabel.textContent = `Selected JI: ${an}/${ad} (${selectedJi.toFixed(2)} c)`; } if (selectionPanel) selectionPanel.style.display = "inline-block"; });
+canvas.addEventListener("click", (ev) => {
+  const rect = canvas.getBoundingClientRect();
+  const cssW = rect.width; const cssH = rect.height;
+  const x = ev.clientX - rect.left; const y = ev.clientY - rect.top;
+  if (y < cssH / 2 || y > cssH) return;
+  const jiXs = lastDraw.jiPixelXs || []; if (!jiXs.length || !lastState.ji.length) return;
+  let bestIdx = 0, bestDx = Infinity; for (let i = 0; i < jiXs.length; i++) { const dx = Math.abs(jiXs[i] - x); if (dx < bestDx) { bestDx = dx; bestIdx = i; } }
+  if (bestDx > 6) return; selectedJi = lastState.ji[bestIdx]; const jiObj = lastState.jiData[bestIdx]; const [an, ad] = jiObj && jiObj.n && jiObj.d ? [jiObj.n, jiObj.d] : centsToNearestSimpleFraction(selectedJi); if (selectedJiLabel) { selectedJiLabel.textContent = `Selected JI: ${an}/${ad} (${selectedJi.toFixed(2)} c)`; } if (selectionPanel) selectionPanel.style.display = "inline-block"; });
 if (matchEdoBtn) { matchEdoBtn.addEventListener("click", () => { if (selectedJi == null) return; const edo = parseInt(document.getElementById("edoInput").value) || 12; const currentOct = lastState.octave || 1200; const step = currentOct / edo; let k = Math.round(selectedJi / step); if (k <= 0) k = 1; const targetOctave = (selectedJi * edo) / k; const detune = targetOctave - 1200; const detuneInput = document.getElementById("octaveDetuneInput"); if (detuneInput) { detuneInput.value = detune.toFixed(3); detuneInput.dispatchEvent(new Event("input", { bubbles: true })); } }); }
