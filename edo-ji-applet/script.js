@@ -112,11 +112,67 @@ function uniqSortedJiData(items, epsilon = 0.5) {
 let lastDraw = { jiPixelXs: [] };
 function drawRulers(ctx, jiIntervals, edoIntervals, width, height) {
   ctx.clearRect(0, 0, width, height);
-  const half = height / 2;
+  const showEdoLabels = !!(showEdoLabelsEl && showEdoLabelsEl.checked);
+  const showJiLabels = !!(showJiLabelsEl && showJiLabelsEl.checked);
+  const topPad = showEdoLabels ? 18 : 0;
+  // Compute JI label rows to decide bottom padding needed
+  const { rows: jiRows, rowOf: jiRowOf, lineH } = computeJiLabelRows(width);
+  const bottomPad = showJiLabels ? (jiRows * lineH + 2) : 0;
+  const barAreaH = Math.max(10, Math.floor((height - topPad - bottomPad) / 2));
+  const topRegionY = topPad;
+  const bottomRegionY = topPad + barAreaH;
+
+  // Bars
   const jiXs = [];
-  jiIntervals.forEach(c => { const x = (c / 1200) * width; ctx.fillStyle = "blue"; ctx.fillRect(x, half, 2, half); jiXs.push(x); });
+  // EDO bars
+  edoIntervals.forEach((c) => {
+    const x = (c / 1200) * width;
+    const nearest = jiIntervals.reduce((a, b) => Math.abs(b - c) < Math.abs(a - c) ? b : a, jiIntervals[0] ?? 0);
+    const diff = c - nearest;
+    ctx.fillStyle = getColorForDeviation(diff);
+    ctx.fillRect(x, topRegionY, 2, barAreaH);
+  });
+
+  // JI bars
+  jiIntervals.forEach((c) => {
+    const x = (c / 1200) * width;
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(x, bottomRegionY, 2, barAreaH);
+    jiXs.push(x);
+  });
   lastDraw.jiPixelXs = jiXs;
-  edoIntervals.forEach(c => { const x = (c / 1200) * width; const nearest = jiIntervals.reduce((a, b) => Math.abs(b - c) < Math.abs(a - c) ? b : a, jiIntervals[0] ?? 0); const diff = c - nearest; ctx.fillStyle = getColorForDeviation(diff); ctx.fillRect(x, 0, 2, half); });
+
+  // Optional labels with overlap handling
+  ctx.font = '12px Arial';
+  ctx.fillStyle = '#000';
+  ctx.textAlign = 'center';
+
+  if (showEdoLabels) {
+    ctx.textBaseline = 'bottom';
+    let lastRight = -Infinity;
+    for (let i = 0; i < edoIntervals.length; i++) {
+      const x = (edoIntervals[i] / 1200) * width;
+      const label = String(i);
+      const w = ctx.measureText(label).width + 6;
+      if (x - w/2 > lastRight + 2) {
+        ctx.fillText(label, x, topRegionY - 2);
+        lastRight = x + w/2;
+      }
+    }
+  }
+
+  if (showJiLabels && jiRows > 0) {
+    ctx.textBaseline = 'bottom';
+    for (let i = 0; i < jiIntervals.length; i++) {
+      const jiObj = lastState.jiData[i];
+      const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
+      if (!label) continue;
+      const x = (jiIntervals[i] / 1200) * width;
+      const r = jiRowOf[i] || 0;
+      const y = height - 2 - r * lineH;
+      ctx.fillText(label, x, y);
+    }
+  }
 }
 
 // Wiring
@@ -128,6 +184,47 @@ const selectionPanel = document.getElementById("selectionPanel");
 const selectedJiLabel = document.getElementById("selectedJiLabel");
 const matchEdoBtn = document.getElementById("matchEdoBtn");
 const canvasContainer = document.getElementById("canvasContainer");
+const showEdoLabelsEl = document.getElementById("showEdoLabels");
+const showJiLabelsEl = document.getElementById("showJiLabels");
+
+// Compute multi-row assignment for JI labels so all display
+function computeJiLabelRows(width) {
+  const showJiLabels = !!(showJiLabelsEl && showJiLabelsEl.checked);
+  const lineH = 14; // px per row
+  const rowGap = 0;
+  const rowOf = [];
+  if (!showJiLabels || !lastState || !lastState.ji || !lastState.ji.length) {
+    return { rows: 0, rowOf, lineH };
+  }
+  // Precompute label strings and widths
+  ctx.font = '12px Arial';
+  const items = lastState.ji.map((c, i) => {
+    const jiObj = lastState.jiData[i];
+    const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
+    const x = (c / 1200) * width;
+    const w = label ? (ctx.measureText(label).width + 6) : 0;
+    return { i, x, w, label };
+  }).filter(it => it.label);
+  // Greedy stacking into rows without overlap
+  const lastRights = []; // lastRight per row
+  for (const it of items) {
+    let placed = false;
+    for (let r = 0; r < lastRights.length; r++) {
+      if (it.x - it.w / 2 > lastRights[r] + 2) {
+        rowOf[it.i] = r;
+        lastRights[r] = it.x + it.w / 2;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      const r = lastRights.length;
+      rowOf[it.i] = r;
+      lastRights.push(it.x + it.w / 2);
+    }
+  }
+  return { rows: lastRights.length, rowOf, lineH };
+}
 
 function resizeCanvasToContainer() {
   const dpr = window.devicePixelRatio || 1;
@@ -227,8 +324,20 @@ canvas.addEventListener("click", (ev) => {
   const rect = canvas.getBoundingClientRect();
   const cssW = rect.width; const cssH = rect.height;
   const x = ev.clientX - rect.left; const y = ev.clientY - rect.top;
-  if (y < cssH / 2 || y > cssH) return;
+  const showJiLabels = !!(showJiLabelsEl && showJiLabelsEl.checked);
+  const { rows: jiRows, lineH } = computeJiLabelRows(cssW);
+  const bottomPad = showJiLabels ? (jiRows * lineH + 2) : 0;
+  const showEdoLabels = !!(showEdoLabelsEl && showEdoLabelsEl.checked);
+  const topPad = showEdoLabels ? 18 : 0;
+  const barAreaH = Math.max(10, Math.floor((cssH - topPad - bottomPad) / 2));
+  const bottomRegionY = topPad + barAreaH;
+  const bottomRegionY2 = bottomRegionY + barAreaH;
+  if (y < bottomRegionY || y > bottomRegionY2) return;
   const jiXs = lastDraw.jiPixelXs || []; if (!jiXs.length || !lastState.ji.length) return;
   let bestIdx = 0, bestDx = Infinity; for (let i = 0; i < jiXs.length; i++) { const dx = Math.abs(jiXs[i] - x); if (dx < bestDx) { bestDx = dx; bestIdx = i; } }
   if (bestDx > 6) return; selectedJi = lastState.ji[bestIdx]; const jiObj = lastState.jiData[bestIdx]; const [an, ad] = jiObj && jiObj.n && jiObj.d ? [jiObj.n, jiObj.d] : centsToNearestSimpleFraction(selectedJi); if (selectedJiLabel) { selectedJiLabel.textContent = `Selected JI: ${an}/${ad} (${selectedJi.toFixed(2)} c)`; } if (selectionPanel) selectionPanel.style.display = "inline-block"; });
 if (matchEdoBtn) { matchEdoBtn.addEventListener("click", () => { if (selectedJi == null) return; const edo = parseInt(document.getElementById("edoInput").value) || 12; const currentOct = lastState.octave || 1200; const step = currentOct / edo; let k = Math.round(selectedJi / step); if (k <= 0) k = 1; const targetOctave = (selectedJi * edo) / k; const detune = targetOctave - 1200; const detuneInput = document.getElementById("octaveDetuneInput"); if (detuneInput) { detuneInput.value = detune.toFixed(3); detuneInput.dispatchEvent(new Event("input", { bubbles: true })); } }); }
+
+// Re-render on toggle changes
+if (showEdoLabelsEl) showEdoLabelsEl.addEventListener('change', queuedUpdate);
+if (showJiLabelsEl) showJiLabelsEl.addEventListener('change', queuedUpdate);
