@@ -8,6 +8,38 @@ import { getState, setState } from "./state/store.js";
 
 const els = getElements();
 
+// --- Persistence for canvas container size ---
+const STORAGE_KEY_SIZE = 'jiEdoVisualizer.canvasSize.v1';
+
+function applyPersistedContainerSize() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SIZE);
+    if (!raw) return;
+    const { w, h } = JSON.parse(raw);
+    const width = Number(w);
+    const height = Number(h);
+    if (Number.isFinite(width) && width > 0) {
+      els.canvasContainer.style.width = Math.max(LAYOUT.minCanvas, Math.round(width)) + 'px';
+    }
+    if (Number.isFinite(height) && height > 0) {
+      els.canvasContainer.style.height = Math.max(LAYOUT.minCanvas, Math.round(height)) + 'px';
+    }
+  } catch {}
+}
+
+let saveSizeTimer = null;
+function saveContainerSizeDebounced() {
+  if (saveSizeTimer) clearTimeout(saveSizeTimer);
+  saveSizeTimer = setTimeout(() => {
+    try {
+      const rect = els.canvasContainer.getBoundingClientRect();
+      const payload = { w: Math.round(rect.width), h: Math.round(rect.height) };
+      localStorage.setItem(STORAGE_KEY_SIZE, JSON.stringify(payload));
+    } catch {}
+    saveSizeTimer = null;
+  }, 150);
+}
+
 function getCanvasCssSize() {
   const rect = els.canvas.getBoundingClientRect();
   return { width: Math.max(LAYOUT.minCanvas, Math.floor(rect.width)), height: Math.max(LAYOUT.minCanvas, Math.floor(rect.height)) };
@@ -49,6 +81,7 @@ function queuedUpdate() {
 }
 
 // Init
+applyPersistedContainerSize();
 wireControls(queuedUpdate);
 wireTooltip(els, getState);
 wireSelection(els, getState, (detune) => {
@@ -60,10 +93,10 @@ wireSelection(els, getState, (detune) => {
 
 // Resize handling
 if (window.ResizeObserver) {
-  const ro = new ResizeObserver(() => { resizeCanvasToContainer(); queuedUpdate(); });
+  const ro = new ResizeObserver(() => { resizeCanvasToContainer(); saveContainerSizeDebounced(); queuedUpdate(); });
   ro.observe(els.canvasContainer);
 }
-window.addEventListener('resize', () => { resizeCanvasToContainer(); queuedUpdate(); });
+window.addEventListener('resize', () => { resizeCanvasToContainer(); saveContainerSizeDebounced(); queuedUpdate(); });
 
 // First render
 resizeCanvasToContainer();
