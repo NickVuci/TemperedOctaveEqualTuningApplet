@@ -77,15 +77,17 @@ export function wireTooltip(els, getState) {
     const cssW = rect.width;
     const x = ev.clientX - rect.left;
   const cents = mapXToCents(x, cssW, LAYOUT.hPad, 1200 + LAYOUT.centsRightBuffer);
-    const nearestEDO = nearestValue(state.edo, cents);
+    // For matching, use ORIGINAL EDO positions (1200c based)
+    const edoOriginal = state.edoOriginal && state.edoOriginal.length ? state.edoOriginal : (state.edoCount ? Array.from({length: (state.edoCount + 1)}, (_, i) => i * (1200 / state.edoCount)) : []);
+    const nearestEDO = nearestValue(edoOriginal, cents);
     const nearestJI = nearestValue(state.ji, cents);
     const diff = (nearestEDO !== undefined && nearestJI !== undefined) ? (nearestEDO - nearestJI) : undefined;
     if (nearestEDO === undefined) { tooltip.style.display = "none"; return; }
     let html = `Cents: ${cents.toFixed(2)}`;
     if (nearestEDO !== undefined) {
-      const k = nearestIndex(state.edo, nearestEDO);
+      const k = nearestIndex(edoOriginal, nearestEDO);
       const n = (k >= 0) ? k : 0;
-      const edoCount = state.edoCount || (state.edo.length - 1);
+      const edoCount = state.edoCount || (edoOriginal.length - 1);
       html += `<br/>Nearest EDO: ${nearestEDO.toFixed(2)}c (step ${n}/${edoCount})`;
     }
     if (nearestJI !== undefined) {
@@ -156,8 +158,8 @@ export function wireSelection(els, getState, setDetune) {
       const state = getState();
       if (selectedJi == null) return;
       const edo = parseInt(edoInput.value) || 12;
-      const currentOct = state.octave || 1200;
-      const step = currentOct / edo;
+      // Use original step size for matching
+      const step = 1200 / edo;
       let k = Math.round(selectedJi / step);
       if (k <= 0) k = 1;
       const targetOctave = (selectedJi * edo) / k;

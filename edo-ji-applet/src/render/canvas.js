@@ -13,10 +13,10 @@ function getColorForDeviation(diff) {
 
 /**
  * Draw the EDO and JI rulers onto the canvas.
- * @param {{ctx:CanvasRenderingContext2D,width:number,height:number,jiIntervals:number[],jiData:any[],edoIntervals:number[],showEdoLabels:boolean,showJiLabels:boolean}} args
+ * @param {{ctx:CanvasRenderingContext2D,width:number,height:number,jiIntervals:number[],jiData:any[],edoIntervals:number[],edoOriginalIntervals?:number[],showEdoLabels:boolean,showJiLabels:boolean,selectedJiIndex?:number|null}} args
  * @returns {{jiPixelXs:number[],jiRows:number,jiLineH:number}}
  */
-export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels, showJiLabels, selectedJiIndex = null }) {
+export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals = edoIntervals, showEdoLabels, showJiLabels, selectedJiIndex = null }) {
   ctx.clearRect(0, 0, width, height);
 
   const { rows: jiRows, rowOf, lineH } = computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels });
@@ -28,15 +28,20 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
 
   // EDO bars (upper band) using two-pointer sweep for nearest JI
   const domainCents = 1200 + LAYOUT.centsRightBuffer;
+  // Two-pointer sweep driven by ORIGINAL EDO cents to determine nearest JI for deviation/coloring
   let j = 0;
   for (let i = 0; i < edoIntervals.length; i++) {
-    const c = edoIntervals[i];
-    while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - c) <= Math.abs(jiIntervals[j] - c)) {
+    const cOrig = edoOriginalIntervals[i];
+    // Guard: in case arrays mismatch length
+    if (cOrig == null) continue;
+    while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - cOrig) <= Math.abs(jiIntervals[j] - cOrig)) {
       j++;
     }
-    const nearest = jiIntervals.length ? jiIntervals[j] : 0;
-    const x = mapCentsToX(c, width, LAYOUT.hPad, domainCents);
-    const diff = c - nearest;
+  const nearest = jiIntervals.length ? jiIntervals[j] : 0;
+  // Draw at CURRENT detuned position; color by deviation between CURRENT detuned step and JI matched using ORIGINAL mapping
+  const cDetuned = edoIntervals[i];
+  const x = mapCentsToX(cDetuned, width, LAYOUT.hPad, domainCents);
+  const diff = cDetuned - nearest;
     ctx.fillStyle = getColorForDeviation(diff);
     ctx.fillRect(x, topRegionY, 2, barAreaH);
   }

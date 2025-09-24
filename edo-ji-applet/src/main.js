@@ -70,10 +70,13 @@ function update() {
   const manualDetailed = parseManualIntervalsDetailed(controls.manualText);
   const jiData = buildJI({ oddLimit: (Number.isFinite(controls.oddLimit) && controls.oddLimit % 2 === 0) ? controls.oddLimit - 1 : controls.oddLimit, primeLimit: controls.primeLimit, manualDetailed });
   const jiIntervals = jiData.map(o => o.cents);
+  // EDO intervals for current layout (may be detuned)
   const edoIntervals = generateEDOIntervals(controls.edo, controls.octaveCents);
+  // EDO intervals for original mapping (always 1200c octave)
+  const edoOriginal = generateEDOIntervals(controls.edo, 1200);
   const { width, height } = getCanvasCssSize();
-  const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels, selectedJiIndex: getState().selectedJiIndex });
-  setState({ ji: jiIntervals, jiData, edo: edoIntervals, octave: controls.octaveCents, edoCount: controls.edo, jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
+  const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals: edoOriginal, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels, selectedJiIndex: getState().selectedJiIndex });
+  setState({ ji: jiIntervals, jiData, edo: edoIntervals, edoOriginal, octave: controls.octaveCents, edoCount: controls.edo, jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
 }
 
 let updateTimer = null;
@@ -127,6 +130,7 @@ function redrawWithCurrentState() {
     jiIntervals: state.ji,
     jiData: state.jiData,
     edoIntervals: state.edo,
+    edoOriginalIntervals: state.edoOriginal || generateEDOIntervals(state.edoCount || 12, 1200),
     showEdoLabels,
     showJiLabels,
     selectedJiIndex: state.selectedJiIndex,
