@@ -16,7 +16,7 @@ function getColorForDeviation(diff) {
  * @param {{ctx:CanvasRenderingContext2D,width:number,height:number,jiIntervals:number[],jiData:any[],edoIntervals:number[],showEdoLabels:boolean,showJiLabels:boolean}} args
  * @returns {{jiPixelXs:number[],jiRows:number,jiLineH:number}}
  */
-export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels, showJiLabels }) {
+export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels, showJiLabels, selectedJiIndex = null }) {
   ctx.clearRect(0, 0, width, height);
 
   const { rows: jiRows, rowOf, lineH } = computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels });
@@ -43,10 +43,13 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
 
   // JI bars (lower band)
   const jiXs = [];
-  jiIntervals.forEach((c) => {
+  jiIntervals.forEach((c, idx) => {
     const x = mapCentsToX(c, width, LAYOUT.hPad, domainCents);
+    const isSelected = selectedJiIndex != null && idx === selectedJiIndex;
     ctx.fillStyle = COLORS.jiBar;
-    ctx.fillRect(x, bottomRegionY, 2, barAreaH);
+    const barWidth = isSelected ? 4 : 2;
+    const xLeft = x - Math.floor(barWidth / 2);
+    ctx.fillRect(xLeft, bottomRegionY, barWidth, barAreaH);
     jiXs.push(x);
   });
 

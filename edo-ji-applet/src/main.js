@@ -72,7 +72,7 @@ function update() {
   const jiIntervals = jiData.map(o => o.cents);
   const edoIntervals = generateEDOIntervals(controls.edo, controls.octaveCents);
   const { width, height } = getCanvasCssSize();
-  const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels });
+  const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels, selectedJiIndex: getState().selectedJiIndex });
   setState({ ji: jiIntervals, jiData, edo: edoIntervals, octave: controls.octaveCents, edoCount: controls.edo, jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
 }
 
@@ -129,6 +129,7 @@ function redrawWithCurrentState() {
     edoIntervals: state.edo,
     showEdoLabels,
     showJiLabels,
+    selectedJiIndex: state.selectedJiIndex,
   });
   setState({ jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
 }

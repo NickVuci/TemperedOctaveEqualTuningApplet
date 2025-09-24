@@ -2,6 +2,7 @@ import { centsToNearestSimpleFraction } from "../utils/math.js";
 import { nearestIndex, nearestValue } from "../utils/array.js";
 import { mapXToCents } from "../render/scale.js";
 import { LAYOUT } from "../render/constants.js";
+import { setState } from "../state/store.js";
 
 /**
  * Query and return all required DOM elements and the canvas context.
@@ -134,6 +135,14 @@ export function wireSelection(els, getState, setDetune) {
     }
     if (bestDx > 6) return;
     selectedJi = state.ji[bestIdx];
+    // Persist selection index so renderer can bold it
+    setState({ selectedJiIndex: bestIdx });
+    // Trigger a repaint via input event on a hidden control isn't ideal; rely on the selection panel show for now
+    // The main loop will repaint on next queuedUpdate or any input; to ensure immediate feedback, force a small async paint
+    requestAnimationFrame(() => {
+      const ev = new Event('resize');
+      window.dispatchEvent(ev);
+    });
     const jiObj = state.jiData[bestIdx];
     const [an, ad] = jiObj && jiObj.n && jiObj.d ? [jiObj.n, jiObj.d] : centsToNearestSimpleFraction(selectedJi);
     if (selectedJiLabel) {
