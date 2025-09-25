@@ -162,6 +162,58 @@ wireSelection(els, getState, (detune) => {
   }
 });
 
+// Optimize detune: search within [-50, 50] cents for best alignment
+if (els.optimizeDetuneBtn) {
+  els.optimizeDetuneBtn.addEventListener('click', () => {
+    const state = getState();
+    const jiIntervals = state && Array.isArray(state.ji) ? state.ji : [];
+    if (!jiIntervals.length) return;
+    const edo = parseInt(els.edoInput.value) || (state.edoCount || 12);
+
+    // Score function: favor many close matches and overall closeness
+    function scoreForDetune(detune) {
+      const steps = generateEDOIntervals(edo, 1200 + detune);
+      let score = 0;
+      // two-pointer nearest search; jiIntervals are sorted, steps are sorted
+      let j = 0;
+      for (let i = 0; i < steps.length; i++) {
+        const c = steps[i];
+        while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - c) <= Math.abs(jiIntervals[j] - c)) j++;
+        const d = Math.abs(c - jiIntervals[j]);
+        const base = Math.max(0, 15 - d) / 15; // 0..1 within 15c
+        const bonus = (d <= 5 ? 0.5 : 0) + (d <= 1 ? 0.5 : 0); // encourage very close hits
+        score += base + bonus;
+      }
+      return score;
+    }
+
+    // Multi-stage search: coarse, refine, fine
+    let bestDetune = 0, bestScore = -Infinity;
+    const tryRange = (start, end, step) => {
+      for (let v = start; v <= end + 1e-9; v += step) {
+        const s = scoreForDetune(v);
+        if (s > bestScore) { bestScore = s; bestDetune = v; }
+      }
+    };
+
+    tryRange(-50, 50, 0.5);
+    const r1 = 1.0; // refine ±1c around best
+    tryRange(Math.max(-50, bestDetune - r1), Math.min(50, bestDetune + r1), 0.05);
+    const r2 = 0.25; // fine ±0.25c around best
+    tryRange(Math.max(-50, bestDetune - r2), Math.min(50, bestDetune + r2), 0.01);
+
+    // Apply best detune
+    const det = Math.max(-50, Math.min(50, Math.round(bestDetune * 100) / 100));
+    if (els.octaveDetuneInput) {
+      els.octaveDetuneInput.value = det.toFixed(2);
+      els.octaveDetuneInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (els.octaveDetuneSlider) {
+      els.octaveDetuneSlider.value = String(det);
+    }
+  });
+}
+
 // Resize handling
 if (window.ResizeObserver) {
   const ro = new ResizeObserver(() => { resizeCanvasToContainer(); saveContainerSizeDebounced(); queuedUpdate(); });

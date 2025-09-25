@@ -19,6 +19,7 @@ export function getElements() {
     selectionPanel: document.getElementById("selectionPanel"),
     selectedJiLabel: document.getElementById("selectedJiLabel"),
     matchEdoBtn: document.getElementById("matchEdoBtn"),
+  optimizeDetuneBtn: document.getElementById("optimizeDetuneBtn"),
     showEdoLabelsEl: document.getElementById("showEdoLabels"),
     showJiLabelsEl: document.getElementById("showJiLabels"),
     edoInput: document.getElementById("edoInput"),
