@@ -100,6 +100,19 @@ if (els.edoInput && els.octaveDetuneInput) {
 }
 // Keep slider and number input in lockstep
 if (els.octaveDetuneSlider && els.octaveDetuneInput) {
+  // First click focuses slider without changing value
+  const slider = els.octaveDetuneSlider;
+  const focusOnlyIfUnfocused = (e) => {
+    if (document.activeElement !== slider) {
+      e.preventDefault();
+      // Avoid jump in value on first click; just focus
+      try { slider.focus({ preventScroll: true }); } catch { slider.focus(); }
+    }
+  };
+  slider.addEventListener('pointerdown', focusOnlyIfUnfocused);
+  slider.addEventListener('mousedown', focusOnlyIfUnfocused);
+  slider.addEventListener('touchstart', focusOnlyIfUnfocused, { passive: false });
+
   // Number -> Slider
   els.octaveDetuneInput.addEventListener('input', () => {
     const v = parseFloat(els.octaveDetuneInput.value) || 0;
