@@ -2,13 +2,27 @@ import { COLORS, FONTS, LAYOUT } from "./constants.js";
 import { computeJiLabelRows } from "./layout.js";
 import { mapCentsToX } from "./scale.js";
 
+// Tri-color gradient: green at 0c, yellow at 5c, red at 15c; above 15c, use black
+const RED_DEV = 15;     // cents → red
+const YELLOW_DEV = 5;   // cents → yellow
 function getColorForDeviation(diff) {
-  const absDiff = Math.abs(diff);
-  if (absDiff < 0.01) return COLORS.perfect;
-  if (absDiff <= 1) return COLORS.near1;
-  if (absDiff <= 5) return COLORS.near5;
-  if (absDiff <= 10) return COLORS.near10;
-  return COLORS.far;
+  const a = Math.abs(diff);
+  // Exact/near-exact match: solid green
+  if (a < 0.01) return COLORS.perfect;
+  // Beyond gradient range: black
+  if (a > RED_DEV) return COLORS.far;
+  // 0..5c: green (0,128,0) → yellow (255,255,0)
+  if (a <= YELLOW_DEV) {
+    const t = a / YELLOW_DEV; // 0 at green, 1 at yellow
+    const r = Math.round(255 * t);
+    const g = Math.round(128 + (255 - 128) * t);
+    return `rgb(${r}, ${g}, 0)`;
+  }
+  // 5..15c: yellow (255,255,0) → red (255,0,0)
+  const t = (a - YELLOW_DEV) / (RED_DEV - YELLOW_DEV); // 0 at yellow, 1 at red
+  const r = 255;
+  const g = Math.round(255 * (1 - t));
+  return `rgb(${r}, ${g}, 0)`;
 }
 
 /**
