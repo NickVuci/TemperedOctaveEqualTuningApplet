@@ -91,8 +91,8 @@ wireControls(queuedUpdate);
 // When EDO changes, reset octave detune back to 0 cents
 if (els.edoInput && els.octaveDetuneInput) {
   els.edoInput.addEventListener('input', () => {
-    if (els.octaveDetuneInput.value !== '0') {
-      els.octaveDetuneInput.value = '0';
+    if (els.octaveDetuneInput.value !== '0.00') {
+      els.octaveDetuneInput.value = '0.00';
       if (els.octaveDetuneSlider) els.octaveDetuneSlider.value = '0';
       els.octaveDetuneInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
@@ -103,23 +103,42 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
   // Number -> Slider
   els.octaveDetuneInput.addEventListener('input', () => {
     const v = parseFloat(els.octaveDetuneInput.value) || 0;
-    els.octaveDetuneSlider.value = String(Math.max(-50, Math.min(50, v)));
+    // Clamp to slider bounds but do not snap; allow fine precision on slider
+    const clamped = Math.max(-50, Math.min(50, v));
+    els.octaveDetuneSlider.value = String(clamped);
   });
   // Slider -> Number
   els.octaveDetuneSlider.addEventListener('input', () => {
     const v = parseFloat(els.octaveDetuneSlider.value) || 0;
-    els.octaveDetuneInput.value = v.toFixed(3);
+    els.octaveDetuneInput.value = v.toFixed(2);
     els.octaveDetuneInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  // Custom fine-grained keyboard control on slider
+  els.octaveDetuneSlider.addEventListener('keydown', (e) => {
+    const key = e.key;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'ArrowUp' && key !== 'ArrowDown') return;
+    e.preventDefault();
+    const cur = parseFloat(els.octaveDetuneSlider.value) || 0;
+    const delta = (key === 'ArrowLeft' ? -0.1 : key === 'ArrowRight' ? 0.1 : key === 'ArrowUp' ? 0.01 : -0.01);
+    let next = cur + delta;
+    // round to 2 decimals to avoid float drift
+    next = Math.round(next * 100) / 100;
+    next = Math.max(-50, Math.min(50, next));
+    els.octaveDetuneSlider.value = String(next);
+    // Manually dispatch input to trigger sync and redraw
+    els.octaveDetuneSlider.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
 wireTooltip(els, getState);
 wireSelection(els, getState, (detune) => {
   if (els.octaveDetuneInput) {
-    els.octaveDetuneInput.value = detune.toFixed(3);
+    els.octaveDetuneInput.value = detune.toFixed(2);
     els.octaveDetuneInput.dispatchEvent(new Event("input", { bubbles: true }));
   }
   if (els.octaveDetuneSlider) {
-    els.octaveDetuneSlider.value = detune.toFixed(3);
+    // Allow fine precision on slider
+    const clamped = Math.max(-50, Math.min(50, detune));
+    els.octaveDetuneSlider.value = String(Math.round(clamped * 100) / 100);
   }
 });
 
