@@ -77,17 +77,17 @@ export function wireTooltip(els, getState) {
     const cssW = rect.width;
     const x = ev.clientX - rect.left;
   const cents = mapXToCents(x, cssW, LAYOUT.hPad, 1200 + LAYOUT.centsRightBuffer);
-    // For matching, use ORIGINAL EDO positions (1200c based)
-    const edoOriginal = state.edoOriginal && state.edoOriginal.length ? state.edoOriginal : (state.edoCount ? Array.from({length: (state.edoCount + 1)}, (_, i) => i * (1200 / state.edoCount)) : []);
-    const nearestEDO = nearestValue(edoOriginal, cents);
+    // Use CURRENT (possibly detuned) EDO positions for matching/tooltip
+    const edoDetuned = state.edo && state.edo.length ? state.edo : (state.edoCount && state.octave ? Array.from({length: (state.edoCount + 1)}, (_, i) => i * (state.octave / state.edoCount)) : []);
+    const nearestEDO = nearestValue(edoDetuned, cents);
     const nearestJI = nearestValue(state.ji, cents);
     const diff = (nearestEDO !== undefined && nearestJI !== undefined) ? (nearestEDO - nearestJI) : undefined;
     if (nearestEDO === undefined) { tooltip.style.display = "none"; return; }
     let html = `Cents: ${cents.toFixed(2)}`;
     if (nearestEDO !== undefined) {
-      const k = nearestIndex(edoOriginal, nearestEDO);
+      const k = nearestIndex(edoDetuned, nearestEDO);
       const n = (k >= 0) ? k : 0;
-      const edoCount = state.edoCount || (edoOriginal.length - 1);
+      const edoCount = state.edoCount || (edoDetuned.length - 1);
       html += `<br/>Nearest EDO: ${nearestEDO.toFixed(2)}c (step ${n}/${edoCount})`;
     }
     if (nearestJI !== undefined) {

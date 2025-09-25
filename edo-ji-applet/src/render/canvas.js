@@ -28,20 +28,17 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
 
   // EDO bars (upper band) using two-pointer sweep for nearest JI
   const domainCents = 1200 + LAYOUT.centsRightBuffer;
-  // Two-pointer sweep driven by ORIGINAL EDO cents to determine nearest JI for deviation/coloring
+  // Two-pointer sweep driven by CURRENT (possibly detuned) EDO cents to determine nearest JI for deviation/coloring
   let j = 0;
   for (let i = 0; i < edoIntervals.length; i++) {
-    const cOrig = edoOriginalIntervals[i];
-    // Guard: in case arrays mismatch length
-    if (cOrig == null) continue;
-    while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - cOrig) <= Math.abs(jiIntervals[j] - cOrig)) {
+    const cDetuned = edoIntervals[i];
+    if (cDetuned == null) continue;
+    while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - cDetuned) <= Math.abs(jiIntervals[j] - cDetuned)) {
       j++;
     }
-  const nearest = jiIntervals.length ? jiIntervals[j] : 0;
-  // Draw at CURRENT detuned position; color by deviation between CURRENT detuned step and JI matched using ORIGINAL mapping
-  const cDetuned = edoIntervals[i];
-  const x = mapCentsToX(cDetuned, width, LAYOUT.hPad, domainCents);
-  const diff = cDetuned - nearest;
+    const nearest = jiIntervals.length ? jiIntervals[j] : 0;
+    const x = mapCentsToX(cDetuned, width, LAYOUT.hPad, domainCents);
+    const diff = cDetuned - nearest;
     ctx.fillStyle = getColorForDeviation(diff);
     ctx.fillRect(x, topRegionY, 2, barAreaH);
   }
