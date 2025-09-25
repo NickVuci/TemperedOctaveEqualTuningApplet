@@ -52,10 +52,22 @@ export function readControls(els) {
 }
 
 /**
- * Attach input listeners to trigger debounced updates.
+ * Attach input listeners.
+ * - Numeric and range inputs trigger immediate updates for real-time feedback.
+ * - Textareas and other inputs use queued (debounced) updates.
+ * Skips attaching a generic handler to the octave slider; it's managed explicitly in main.js.
  */
-export function wireControls(onChange) {
-  document.querySelectorAll("input, textarea").forEach(el => el.addEventListener("input", onChange));
+export function wireControls(onChangeQueued, onChangeImmediate) {
+  const els = Array.from(document.querySelectorAll("input, textarea"));
+  els.forEach(el => {
+    if (!(el instanceof HTMLElement)) return;
+    // Skip the detune slider; it's wired manually for fine control in main.js
+    if (el.id === 'octaveDetuneSlider') return;
+    const tag = el.tagName.toLowerCase();
+    const type = (el.getAttribute('type') || '').toLowerCase();
+    const isImmediate = (tag === 'input' && (type === 'number' || type === 'range' || type === 'checkbox'));
+    el.addEventListener('input', isImmediate && onChangeImmediate ? onChangeImmediate : onChangeQueued);
+  });
 }
 
 /**

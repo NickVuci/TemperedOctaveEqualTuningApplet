@@ -87,14 +87,16 @@ function queuedUpdate() {
 
 // Init
 applyPersistedContainerSize();
-wireControls(queuedUpdate);
+// Wire controls: immediate for number/range/checkbox, queued for others
+wireControls(queuedUpdate, () => { update(); });
 // When EDO changes, reset octave detune back to 0 cents
 if (els.edoInput && els.octaveDetuneInput) {
   els.edoInput.addEventListener('input', () => {
     if (els.octaveDetuneInput.value !== '0.00') {
       els.octaveDetuneInput.value = '0.00';
       if (els.octaveDetuneSlider) els.octaveDetuneSlider.value = '0';
-      els.octaveDetuneInput.dispatchEvent(new Event("input", { bubbles: true }));
+      // Immediate update after resetting detune
+      update();
     }
   });
 }
@@ -120,11 +122,14 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
     const clamped = Math.max(-50, Math.min(50, v));
     els.octaveDetuneSlider.value = String(clamped);
   });
-  // Slider -> Number
-  els.octaveDetuneSlider.addEventListener('input', () => {
+  // Slider -> Number (real-time redraw)
+  els.octaveDetuneSlider.addEventListener('input', (ev) => {
     const v = parseFloat(els.octaveDetuneSlider.value) || 0;
     els.octaveDetuneInput.value = v.toFixed(2);
-    els.octaveDetuneInput.dispatchEvent(new Event('input', { bubbles: true }));
+    // Immediate update for smooth dragging/keys
+    update();
+    // Prevent duplicate queued updates from global handlers
+    if (ev && typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
   });
   // Custom fine-grained keyboard control on slider
   els.octaveDetuneSlider.addEventListener('keydown', (e) => {
@@ -140,6 +145,8 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
     els.octaveDetuneSlider.value = String(next);
     // Manually dispatch input to trigger sync and redraw
     els.octaveDetuneSlider.dispatchEvent(new Event('input', { bubbles: true }));
+    // Extra immediate update for responsiveness
+    update();
   });
 }
 wireTooltip(els, getState);
