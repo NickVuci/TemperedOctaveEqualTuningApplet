@@ -37,10 +37,12 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
       j++;
     }
     const nearest = jiIntervals.length ? jiIntervals[j] : 0;
-    const x = mapCentsToX(cDetuned, width, LAYOUT.hPad, domainCents);
-    const diff = cDetuned - nearest;
-    ctx.fillStyle = getColorForDeviation(diff);
-    ctx.fillRect(x, topRegionY, 2, barAreaH);
+  const x = mapCentsToX(cDetuned, width, LAYOUT.hPad, domainCents);
+  const diff = cDetuned - nearest;
+  ctx.fillStyle = getColorForDeviation(diff);
+  const barWidth = 2;
+  const xLeft = x - Math.floor(barWidth / 2);
+  ctx.fillRect(xLeft, topRegionY, barWidth, barAreaH);
   }
 
   // JI bars (lower band)
