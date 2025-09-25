@@ -93,8 +93,23 @@ if (els.edoInput && els.octaveDetuneInput) {
   els.edoInput.addEventListener('input', () => {
     if (els.octaveDetuneInput.value !== '0') {
       els.octaveDetuneInput.value = '0';
+      if (els.octaveDetuneSlider) els.octaveDetuneSlider.value = '0';
       els.octaveDetuneInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
+  });
+}
+// Keep slider and number input in lockstep
+if (els.octaveDetuneSlider && els.octaveDetuneInput) {
+  // Number -> Slider
+  els.octaveDetuneInput.addEventListener('input', () => {
+    const v = parseFloat(els.octaveDetuneInput.value) || 0;
+    els.octaveDetuneSlider.value = String(Math.max(-50, Math.min(50, v)));
+  });
+  // Slider -> Number
+  els.octaveDetuneSlider.addEventListener('input', () => {
+    const v = parseFloat(els.octaveDetuneSlider.value) || 0;
+    els.octaveDetuneInput.value = v.toFixed(3);
+    els.octaveDetuneInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
 wireTooltip(els, getState);
@@ -102,6 +117,9 @@ wireSelection(els, getState, (detune) => {
   if (els.octaveDetuneInput) {
     els.octaveDetuneInput.value = detune.toFixed(3);
     els.octaveDetuneInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  if (els.octaveDetuneSlider) {
+    els.octaveDetuneSlider.value = detune.toFixed(3);
   }
 });
 

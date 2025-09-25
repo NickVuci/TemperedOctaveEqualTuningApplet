@@ -26,6 +26,7 @@ export function getElements() {
     primeLimitInput: document.getElementById("primeLimitInput"),
     manualIntervals: document.getElementById("manualIntervals"),
     octaveDetuneInput: document.getElementById("octaveDetuneInput"),
+    octaveDetuneSlider: document.getElementById("octaveDetuneSlider"),
   };
 }
 
