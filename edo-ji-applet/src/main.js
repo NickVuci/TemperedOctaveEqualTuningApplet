@@ -7,6 +7,7 @@ import { LAYOUT } from "./render/constants.js";
 import { getState, setState } from "./state/store.js";
 
 const els = getElements();
+let refreshTooltip = () => {};
 
 // --- Persistence for canvas container size ---
 const STORAGE_KEY_SIZE = 'jiEdoVisualizer.canvasSize.v1';
@@ -77,6 +78,8 @@ function update() {
   const { width, height } = getCanvasCssSize();
   const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals: edoOriginal, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels, selectedJiIndex: getState().selectedJiIndex });
   setState({ ji: jiIntervals, jiData, edo: edoIntervals, edoOriginal, octave: controls.octaveCents, edoCount: controls.edo, jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
+  // Update tooltip in place if visible
+  try { refreshTooltip(); } catch {}
 }
 
 let updateTimer = null;
@@ -128,6 +131,8 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
     els.octaveDetuneInput.value = v.toFixed(2);
     // Immediate update for smooth dragging/keys
     update();
+    // Keep tooltip synced while dragging
+    refreshTooltip();
     // Prevent duplicate queued updates from global handlers
     if (ev && typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
   });
@@ -147,9 +152,10 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
     els.octaveDetuneSlider.dispatchEvent(new Event('input', { bubbles: true }));
     // Extra immediate update for responsiveness
     update();
+    refreshTooltip();
   });
 }
-wireTooltip(els, getState);
+refreshTooltip = wireTooltip(els, getState);
 wireSelection(els, getState, (detune) => {
   if (els.octaveDetuneInput) {
     els.octaveDetuneInput.value = detune.toFixed(2);
@@ -211,6 +217,8 @@ if (els.optimizeDetuneBtn) {
     if (els.octaveDetuneSlider) {
       els.octaveDetuneSlider.value = String(det);
     }
+    // Reflect the new detune in tooltip immediately if visible
+    refreshTooltip();
   });
 }
 

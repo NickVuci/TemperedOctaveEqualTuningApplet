@@ -85,18 +85,27 @@ export function updateOctaveDisplay(els, octaveCents) {
  */
 export function wireTooltip(els, getState) {
   const { canvas, tooltip } = els;
-  canvas.addEventListener("mousemove", (ev) => {
+  let lastClientX = 0;
+  let lastClientY = 0;
+  let isInside = false;
+
+  function renderAt(clientX, clientY) {
     const state = getState();
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
-    const x = ev.clientX - rect.left;
-  const cents = mapXToCents(x, cssW, LAYOUT.hPad, 1200 + LAYOUT.centsRightBuffer);
+    const x = clientX - rect.left;
+    const cents = mapXToCents(x, cssW, LAYOUT.hPad, 1200 + LAYOUT.centsRightBuffer);
     // Use CURRENT (possibly detuned) EDO positions for matching/tooltip
-    const edoDetuned = state.edo && state.edo.length ? state.edo : (state.edoCount && state.octave ? Array.from({length: (state.edoCount + 1)}, (_, i) => i * (state.octave / state.edoCount)) : []);
+    const edoDetuned = state.edo && state.edo.length
+      ? state.edo
+      : (state.edoCount && state.octave
+          ? Array.from({ length: (state.edoCount + 1) }, (_, i) => i * (state.octave / state.edoCount))
+          : []);
     const nearestEDO = nearestValue(edoDetuned, cents);
+    if (nearestEDO === undefined) { tooltip.style.display = "none"; return; }
     const nearestJI = nearestValue(state.ji, cents);
     const diff = (nearestEDO !== undefined && nearestJI !== undefined) ? (nearestEDO - nearestJI) : undefined;
-    if (nearestEDO === undefined) { tooltip.style.display = "none"; return; }
+
     let html = `Cents: ${cents.toFixed(2)}`;
     if (nearestEDO !== undefined) {
       const k = nearestIndex(edoDetuned, nearestEDO);
@@ -107,16 +116,34 @@ export function wireTooltip(els, getState) {
     if (nearestJI !== undefined) {
       const jIdx = nearestIndex(state.ji, nearestJI);
       const jiObj = jIdx >= 0 ? state.jiData[jIdx] : undefined;
-      const frac = jiObj && jiObj.n && jiObj.d ? `${jiObj.n}/${jiObj.d}` : (function(){ const [an, ad] = centsToNearestSimpleFraction(nearestJI); return `${an}/${ad}`; })();
+      const frac = jiObj && jiObj.n && jiObj.d
+        ? `${jiObj.n}/${jiObj.d}`
+        : (function(){ const [an, ad] = centsToNearestSimpleFraction(nearestJI); return `${an}/${ad}`; })();
       html += `<br/>Nearest JI: ${nearestJI.toFixed(2)}c (${frac})`;
     }
     if (diff !== undefined) html += `<br/>Deviation: ${(diff).toFixed(2)}c`;
     tooltip.innerHTML = html;
-    tooltip.style.left = `${ev.clientX}px`;
-    tooltip.style.top = `${ev.clientY}px`;
+    tooltip.style.left = `${clientX}px`;
+    tooltip.style.top = `${clientY}px`;
     tooltip.style.display = "block";
+  }
+
+  canvas.addEventListener("mousemove", (ev) => {
+    lastClientX = ev.clientX;
+    lastClientY = ev.clientY;
+    isInside = true;
+    renderAt(ev.clientX, ev.clientY);
   });
-  canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+  canvas.addEventListener("mouseleave", () => {
+    isInside = false;
+    tooltip.style.display = "none";
+  });
+
+  // Return a refresh function to update tooltip at last position when state changes
+  return function refreshTooltip() {
+    if (!isInside) return;
+    renderAt(lastClientX, lastClientY);
+  };
 }
 
 /**
