@@ -20,6 +20,14 @@ export function getElements() {
     selectedJiLabel: document.getElementById("selectedJiLabel"),
     matchEdoBtn: document.getElementById("matchEdoBtn"),
   optimizeDetuneBtn: document.getElementById("optimizeDetuneBtn"),
+    optimizeSchemeSelect: document.getElementById("optimizeSchemeSelect"),
+    symmetricOptimize: document.getElementById("symmetricOptimize"),
+    optWithin: document.getElementById("optWithin"),
+    optBonus5: document.getElementById("optBonus5"),
+    optBonus1: document.getElementById("optBonus1"),
+    optPower: document.getElementById("optPower"),
+    optOddPower: document.getElementById("optOddPower"),
+    optPrimePower: document.getElementById("optPrimePower"),
     showEdoLabelsEl: document.getElementById("showEdoLabels"),
     showJiLabelsEl: document.getElementById("showJiLabels"),
     edoInput: document.getElementById("edoInput"),
@@ -28,6 +36,7 @@ export function getElements() {
     manualIntervals: document.getElementById("manualIntervals"),
     octaveDetuneInput: document.getElementById("octaveDetuneInput"),
     octaveDetuneSlider: document.getElementById("octaveDetuneSlider"),
+    detuneRangeMax: document.getElementById("detuneRangeMax"),
   };
 }
 

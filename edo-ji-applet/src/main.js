@@ -5,6 +5,7 @@ import { generateEDOIntervals } from "./tuning/edo.js";
 import { drawRulers } from "./render/canvas.js";
 import { LAYOUT } from "./render/constants.js";
 import { getState, setState } from "./state/store.js";
+import { optimizeDetune } from "./optimize/detune.js";
 
 const els = getElements();
 let refreshTooltip = () => {};
@@ -103,6 +104,34 @@ if (els.edoInput && els.octaveDetuneInput) {
     }
   });
 }
+// Handle changes to max detune range and keep slider bounds synced
+function getRangeMax() {
+  const r = parseFloat(els.detuneRangeMax?.value);
+  return Number.isFinite(r) && r >= 0 ? Math.min(600, r) : 50;
+}
+function applySliderRangeFromInput() {
+  const R = getRangeMax();
+  if (els.octaveDetuneSlider) {
+    els.octaveDetuneSlider.min = String(-R);
+    els.octaveDetuneSlider.max = String(R);
+    // Clamp current slider value to new bounds
+    const cur = parseFloat(els.octaveDetuneSlider.value) || 0;
+    const clamped = Math.max(-R, Math.min(R, cur));
+    els.octaveDetuneSlider.value = String(clamped);
+  }
+  if (els.octaveDetuneInput) {
+    const cur = parseFloat(els.octaveDetuneInput.value) || 0;
+    const clamped = Math.max(-R, Math.min(R, cur));
+    els.octaveDetuneInput.value = clamped.toFixed(2);
+  }
+}
+if (els.detuneRangeMax) {
+  els.detuneRangeMax.addEventListener('input', () => {
+    applySliderRangeFromInput();
+    update();
+    refreshTooltip();
+  });
+}
 // Keep slider and number input in lockstep
 if (els.octaveDetuneSlider && els.octaveDetuneInput) {
   // First click focuses slider without changing value
@@ -122,7 +151,8 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
   els.octaveDetuneInput.addEventListener('input', () => {
     const v = parseFloat(els.octaveDetuneInput.value) || 0;
     // Clamp to slider bounds but do not snap; allow fine precision on slider
-    const clamped = Math.max(-50, Math.min(50, v));
+    const R = getRangeMax();
+    const clamped = Math.max(-R, Math.min(R, v));
     els.octaveDetuneSlider.value = String(clamped);
   });
   // Slider -> Number (real-time redraw)
@@ -146,7 +176,8 @@ if (els.octaveDetuneSlider && els.octaveDetuneInput) {
     let next = cur + delta;
     // round to 2 decimals to avoid float drift
     next = Math.round(next * 100) / 100;
-    next = Math.max(-50, Math.min(50, next));
+  const R = getRangeMax();
+  next = Math.max(-R, Math.min(R, next));
     els.octaveDetuneSlider.value = String(next);
     // Manually dispatch input to trigger sync and redraw
     els.octaveDetuneSlider.dispatchEvent(new Event('input', { bubbles: true }));
@@ -163,7 +194,8 @@ wireSelection(els, getState, (detune) => {
   }
   if (els.octaveDetuneSlider) {
     // Allow fine precision on slider
-    const clamped = Math.max(-50, Math.min(50, detune));
+    const R = getRangeMax();
+    const clamped = Math.max(-R, Math.min(R, detune));
     els.octaveDetuneSlider.value = String(Math.round(clamped * 100) / 100);
   }
 });
@@ -175,41 +207,32 @@ if (els.optimizeDetuneBtn) {
     const jiIntervals = state && Array.isArray(state.ji) ? state.ji : [];
     if (!jiIntervals.length) return;
     const edo = parseInt(els.edoInput.value) || (state.edoCount || 12);
+    const scheme = (els.optimizeSchemeSelect && els.optimizeSchemeSelect.value) || 'uniform';
+    const symmetric = !!(els.symmetricOptimize && els.symmetricOptimize.checked);
+    const within = parseFloat(els.optWithin?.value) || 15;
+    const bonus5 = parseFloat(els.optBonus5?.value) || 0.5;
+    const bonus1 = parseFloat(els.optBonus1?.value) || 0.5;
+    const power = parseFloat(els.optPower?.value) || 1;
+    const oddPower = parseFloat(els.optOddPower?.value) || 0.6;
+    const primePower = parseFloat(els.optPrimePower?.value) || 0.8;
 
-    // Score function: favor many close matches and overall closeness
-    function scoreForDetune(detune) {
-      const steps = generateEDOIntervals(edo, 1200 + detune);
-      let score = 0;
-      // two-pointer nearest search; jiIntervals are sorted, steps are sorted
-      let j = 0;
-      for (let i = 0; i < steps.length; i++) {
-        const c = steps[i];
-        while (j + 1 < jiIntervals.length && Math.abs(jiIntervals[j + 1] - c) <= Math.abs(jiIntervals[j] - c)) j++;
-        const d = Math.abs(c - jiIntervals[j]);
-        const base = Math.max(0, 15 - d) / 15; // 0..1 within 15c
-        const bonus = (d <= 5 ? 0.5 : 0) + (d <= 1 ? 0.5 : 0); // encourage very close hits
-        score += base + bonus;
-      }
-      return score;
-    }
+    const R = getRangeMax();
+    const { detune: det } = optimizeDetune({
+      edo,
+      jiIntervals,
+      jiData: state.jiData || [],
+      generateEDOIntervals,
+      scheme,
+      params: {
+        symmetric,
+        power,
+        oddPower,
+        primePower,
+        proximity: { within, bonus5, bonus1 },
+      },
+      bounds: { min: -R, max: R },
+    });
 
-    // Multi-stage search: coarse, refine, fine
-    let bestDetune = 0, bestScore = -Infinity;
-    const tryRange = (start, end, step) => {
-      for (let v = start; v <= end + 1e-9; v += step) {
-        const s = scoreForDetune(v);
-        if (s > bestScore) { bestScore = s; bestDetune = v; }
-      }
-    };
-
-    tryRange(-50, 50, 0.5);
-    const r1 = 1.0; // refine ±1c around best
-    tryRange(Math.max(-50, bestDetune - r1), Math.min(50, bestDetune + r1), 0.05);
-    const r2 = 0.25; // fine ±0.25c around best
-    tryRange(Math.max(-50, bestDetune - r2), Math.min(50, bestDetune + r2), 0.01);
-
-    // Apply best detune
-    const det = Math.max(-50, Math.min(50, Math.round(bestDetune * 100) / 100));
     if (els.octaveDetuneInput) {
       els.octaveDetuneInput.value = det.toFixed(2);
       els.octaveDetuneInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -217,7 +240,6 @@ if (els.optimizeDetuneBtn) {
     if (els.octaveDetuneSlider) {
       els.octaveDetuneSlider.value = String(det);
     }
-    // Reflect the new detune in tooltip immediately if visible
     refreshTooltip();
   });
 }
@@ -231,6 +253,7 @@ window.addEventListener('resize', () => { resizeCanvasToContainer(); saveContain
 
 // First render
 resizeCanvasToContainer();
+applySliderRangeFromInput();
 update();
 
 // Redraw helper using current state and current label toggles

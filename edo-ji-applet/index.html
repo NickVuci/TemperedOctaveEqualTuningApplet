@@ -44,14 +44,37 @@
       <div>
         <div id="octaveTotalDisplay" style="font-weight:600; margin-bottom:4px;">Octave: 1200.00 c</div>
   <label>Octave Detuning (cents): <input type="number" id="octaveDetuneInput" value="0.00" step="1" /></label>
-        <label style="display:block; margin-top:6px;">Detune Slider (±50c):
+        <label style="display:block; margin-top:6px;">Max Detune Range (±cents):
+          <input type="number" id="detuneRangeMax" min="0" max="600" step="1" value="50" style="width:90px;" />
+        </label>
+        <label style="display:block; margin-top:6px;">Detune Slider:
           <input type="range" id="octaveDetuneSlider" min="-50" max="50" step="0.01" value="0" style="width:220px; vertical-align:middle;" />
         </label>
       </div>
       <label>Odd Limit: <input type="number" id="oddLimitInput" value="7" min="1" step="2" /></label>
       <label>Prime Limit: <input type="number" id="primeLimitInput" value="0" min="0" /></label>
-      <div style="display:flex; align-items:flex-end; gap:8px;">
+      <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;">
+        <label for="optimizeSchemeSelect" style="font-weight:600;">Scheme:</label>
+        <select id="optimizeSchemeSelect">
+          <option value="uniform" selected>uniform</option>
+          <option value="oddLimit">oddLimit</option>
+          <option value="primeLimit">primeLimit</option>
+          <option value="tenney">tenney</option>
+          <option value="mixed">mixed</option>
+        </select>
+        <label title="Average EDO->JI and JI->EDO matching"> <input type="checkbox" id="symmetricOptimize" /> Symmetric scoring</label>
         <button id="optimizeDetuneBtn" title="Find best detune for current EDO and JI limits">Optimize detune</button>
+        <details>
+          <summary>Advanced scoring params</summary>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:6px;">
+            <label>within (c): <input type="number" id="optWithin" min="1" max="50" step="0.1" value="15" style="width:80px;" /></label>
+            <label>bonus ≤5c: <input type="number" id="optBonus5" min="0" max="2" step="0.05" value="0.5" style="width:80px;" /></label>
+            <label>bonus ≤1c: <input type="number" id="optBonus1" min="0" max="2" step="0.05" value="0.5" style="width:80px;" /></label>
+            <label>power: <input type="number" id="optPower" min="0" max="8" step="0.1" value="1" style="width:80px;" /></label>
+            <label>oddPower: <input type="number" id="optOddPower" min="0" max="8" step="0.1" value="0.6" style="width:80px;" /></label>
+            <label>primePower: <input type="number" id="optPrimePower" min="0" max="8" step="0.1" value="0.8" style="width:80px;" /></label>
+          </div>
+        </details>
       </div>
     </div>
     <div class="row" style="align-items:center;">
