@@ -96,12 +96,19 @@ wireControls(queuedUpdate, () => { update(); });
 // When EDO changes, reset octave detune back to 0 cents
 if (els.edoInput && els.octaveDetuneInput) {
   els.edoInput.addEventListener('input', () => {
+    // Reset detune to 0 on EDO change
     if (els.octaveDetuneInput.value !== '0.00') {
       els.octaveDetuneInput.value = '0.00';
       if (els.octaveDetuneSlider) els.octaveDetuneSlider.value = '0';
-      // Immediate update after resetting detune
-      update();
     }
+    // Auto-set max range to half of a single EDO step (in cents)
+    const edoVal = parseInt(els.edoInput.value) || 12;
+    const halfStep = 600 / Math.max(1, edoVal); // 0.5 * (1200/edo)
+    if (els.detuneRangeMax) {
+      els.detuneRangeMax.value = (Math.round(halfStep * 100) / 100).toString();
+    }
+    applySliderRangeFromInput();
+    update();
   });
 }
 // Handle changes to max detune range and keep slider bounds synced
@@ -253,6 +260,12 @@ window.addEventListener('resize', () => { resizeCanvasToContainer(); saveContain
 
 // First render
 resizeCanvasToContainer();
+// Initialize detune range to half-step for current EDO
+if (els.edoInput && els.detuneRangeMax) {
+  const edoVal0 = parseInt(els.edoInput.value) || 12;
+  const halfStep0 = 600 / Math.max(1, edoVal0);
+  els.detuneRangeMax.value = (Math.round(halfStep0 * 100) / 100).toString();
+}
 applySliderRangeFromInput();
 update();
 
