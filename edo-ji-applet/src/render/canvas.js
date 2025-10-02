@@ -30,10 +30,10 @@ function getColorForDeviation(diff) {
  * @param {{ctx:CanvasRenderingContext2D,width:number,height:number,jiIntervals:number[],jiData:any[],edoIntervals:number[],edoOriginalIntervals?:number[],showEdoLabels:boolean,showJiLabels:boolean,selectedJiIndex?:number|null}} args
  * @returns {{jiPixelXs:number[],jiRows:number,jiLineH:number}}
  */
-export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals = edoIntervals, showEdoLabels, showJiLabels, selectedJiIndex = null }) {
+export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals = edoIntervals, showEdoLabels, showJiLabels, selectedJiIndex = null, periodCents = 1200 }) {
   ctx.clearRect(0, 0, width, height);
 
-  const { rows: jiRows, rowOf, lineH } = computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels });
+  const { rows: jiRows, rowOf, lineH } = computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels, periodCents });
   const topPad = showEdoLabels ? LAYOUT.edoTopPad : 0;
   const bottomPad = showJiLabels ? (jiRows * lineH + 2) : 0;
   const barAreaH = Math.max(LAYOUT.minBarAreaH, Math.floor((height - topPad - bottomPad) / 2));
@@ -41,7 +41,7 @@ export function drawRulers({ ctx, width, height, jiIntervals, jiData, edoInterva
   const bottomRegionY = topPad + barAreaH;
 
   // EDO bars (upper band) using two-pointer sweep for nearest JI
-  const domainCents = 1200 + LAYOUT.centsRightBuffer;
+  const domainCents = periodCents + LAYOUT.centsRightBuffer;
   // Two-pointer sweep driven by CURRENT (possibly detuned) EDO cents to determine nearest JI for deviation/coloring
   let j = 0;
   for (let i = 0; i < edoIntervals.length; i++) {

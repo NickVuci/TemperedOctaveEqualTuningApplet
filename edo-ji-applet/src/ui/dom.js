@@ -16,6 +16,7 @@ export function getElements() {
     canvasContainer: document.getElementById("canvasContainer"),
     tooltip: document.getElementById("tooltip"),
     octaveTotalDisplay: document.getElementById("octaveTotalDisplay"),
+  periodInput: document.getElementById("periodInput"),
     selectionPanel: document.getElementById("selectionPanel"),
     selectedJiLabel: document.getElementById("selectedJiLabel"),
     matchEdoBtn: document.getElementById("matchEdoBtn"),
@@ -46,12 +47,33 @@ export function getElements() {
 export function readControls(els) {
   const edo = parseInt(els.edoInput.value);
   const detune = parseFloat(els.octaveDetuneInput.value) || 0;
+  let periodRaw = (els.periodInput?.value || '2/1').trim();
+  let periodNum = 2, periodDen = 1, baseCents = 1200;
+  if (/^\d+\s*\/\s*\d+$/.test(periodRaw)) {
+    const [nStr, dStr] = periodRaw.split('/');
+    const n = parseInt(nStr.trim());
+    const d = parseInt(dStr.trim());
+    if (n > 0 && d > 0) {
+      periodNum = n; periodDen = d;
+      baseCents = 1200 * Math.log2(n / d);
+    }
+  } else if (/^[-+]?\d+(?:\.\d+)?$/.test(periodRaw)) {
+    const v = parseFloat(periodRaw);
+    if (Number.isFinite(v) && v > 0) {
+      baseCents = v; // treat as direct cents
+      // derive approximate ratio? keep 2/1 placeholder if not ratio
+      periodNum = 0; periodDen = 0; // indicates "no ratio"
+    }
+  }
   const oddLimit = parseInt(els.oddLimitInput.value);
   const primeLimit = parseInt(els.primeLimitInput.value);
   const manualText = els.manualIntervals.value;
   return {
     edo,
-    octaveCents: 1200 + detune,
+    periodNum,
+    periodDen,
+    basePeriodCents: baseCents,
+    octaveCents: baseCents + detune,
     detune,
     oddLimit,
     primeLimit,
@@ -85,7 +107,10 @@ export function wireControls(onChangeQueued, onChangeImmediate) {
  */
 export function updateOctaveDisplay(els, octaveCents) {
   if (els.octaveTotalDisplay) {
-    els.octaveTotalDisplay.textContent = `Octave: ${octaveCents.toFixed(2)} c`;
+    const raw = (els.periodInput?.value || '').trim();
+    let labelRatio = '';
+    if (/^\d+\s*\/\s*\d+$/.test(raw)) labelRatio = raw.replace(/\s+/g,'');
+    els.octaveTotalDisplay.textContent = `Period: ${labelRatio || '(cents)'} = ${octaveCents.toFixed(2)} c`;
   }
 }
 
@@ -103,7 +128,8 @@ export function wireTooltip(els, getState) {
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
     const x = clientX - rect.left;
-    const cents = mapXToCents(x, cssW, LAYOUT.hPad, 1200 + LAYOUT.centsRightBuffer);
+      const period = state.basePeriod || 1200;
+      const cents = mapXToCents(x, cssW, LAYOUT.hPad, period + LAYOUT.centsRightBuffer);
     // Use CURRENT (possibly detuned) EDO positions for matching/tooltip
     const edoDetuned = state.edo && state.edo.length
       ? state.edo
@@ -209,11 +235,12 @@ export function wireSelection(els, getState, setDetune) {
       if (selectedJi == null) return;
       const edo = parseInt(edoInput.value) || 12;
       // Use original step size for matching
-      const step = 1200 / edo;
+  const basePeriod = state.basePeriod || 1200;
+  const step = basePeriod / edo;
       let k = Math.round(selectedJi / step);
       if (k <= 0) k = 1;
-      const targetOctave = (selectedJi * edo) / k;
-      const detune = targetOctave - 1200;
+  const targetPeriod = (selectedJi * edo) / k;
+  const detune = targetPeriod - basePeriod;
       setDetune(detune);
     });
   }

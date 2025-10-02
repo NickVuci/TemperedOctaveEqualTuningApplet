@@ -40,10 +40,15 @@
   <h1>JI vs EDO Visualizer</h1>
   <div class="controls">
     <div class="row">
-      <label>EDO: <input type="number" id="edoInput" value="12" min="1" /></label>
+      <label>Divisions: <input type="number" id="edoInput" value="12" min="1" /></label>
       <div>
-        <div id="octaveTotalDisplay" style="font-weight:600; margin-bottom:4px;">Octave: 1200.00 c</div>
-  <label>Octave Detuning (cents): <input type="number" id="octaveDetuneInput" value="0.00" step="1" /></label>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:4px;">
+          <div id="octaveTotalDisplay" style="font-weight:600;">Period: 2/1 = 1200.00 c</div>
+          <label style="font-size:12px;">Period (ratio or cents):
+            <input type="text" id="periodInput" value="2/1" style="width:110px;" placeholder="2/1 or 1200" />
+          </label>
+        </div>
+  <label>Period Detuning (cents): <input type="number" id="octaveDetuneInput" value="0.00" step="1" /></label>
         <label style="display:block; margin-top:6px;">Max Detune Range (±cents):
           <input type="number" id="detuneRangeMax" min="0" max="600" step="0.01" value="50" style="width:90px;" />
         </label>

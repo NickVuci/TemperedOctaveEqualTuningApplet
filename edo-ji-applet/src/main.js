@@ -70,15 +70,22 @@ function update() {
   const controls = readControls(els);
   updateOctaveDisplay(els, controls.octaveCents);
   const manualDetailed = parseManualIntervalsDetailed(controls.manualText);
-  const jiData = buildJI({ oddLimit: (Number.isFinite(controls.oddLimit) && controls.oddLimit % 2 === 0) ? controls.oddLimit - 1 : controls.oddLimit, primeLimit: controls.primeLimit, manualDetailed });
+  const jiData = buildJI({
+    oddLimit: (Number.isFinite(controls.oddLimit) && controls.oddLimit % 2 === 0) ? controls.oddLimit - 1 : controls.oddLimit,
+    primeLimit: controls.primeLimit,
+    manualDetailed,
+    periodCents: controls.basePeriodCents,
+    periodNum: controls.periodNum,
+    periodDen: controls.periodDen,
+  });
   const jiIntervals = jiData.map(o => o.cents);
   // EDO intervals for current layout (may be detuned)
   const edoIntervals = generateEDOIntervals(controls.edo, controls.octaveCents);
   // EDO intervals for original mapping (always 1200c octave)
-  const edoOriginal = generateEDOIntervals(controls.edo, 1200);
+  const edoOriginal = generateEDOIntervals(controls.edo, controls.basePeriodCents);
   const { width, height } = getCanvasCssSize();
-  const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals: edoOriginal, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels, selectedJiIndex: getState().selectedJiIndex });
-  setState({ ji: jiIntervals, jiData, edo: edoIntervals, edoOriginal, octave: controls.octaveCents, edoCount: controls.edo, jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
+  const res = drawRulers({ ctx: els.ctx, width, height, jiIntervals, jiData, edoIntervals, edoOriginalIntervals: edoOriginal, showEdoLabels: controls.showEdoLabels, showJiLabels: controls.showJiLabels, selectedJiIndex: getState().selectedJiIndex, periodCents: controls.basePeriodCents });
+  setState({ ji: jiIntervals, jiData, edo: edoIntervals, edoOriginal, octave: controls.octaveCents, basePeriod: controls.basePeriodCents, periodNum: controls.periodNum, periodDen: controls.periodDen, edoCount: controls.edo, jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
   // Update tooltip in place if visible
   try { refreshTooltip(); } catch {}
 }
@@ -102,8 +109,9 @@ if (els.edoInput && els.octaveDetuneInput) {
       if (els.octaveDetuneSlider) els.octaveDetuneSlider.value = '0';
     }
     // Auto-set max range to half of a single EDO step (in cents)
-    const edoVal = parseInt(els.edoInput.value) || 12;
-    const halfStep = 600 / Math.max(1, edoVal); // 0.5 * (1200/edo)
+  const edoVal = parseInt(els.edoInput.value) || 12;
+  const basePeriod = getState().basePeriod || 1200;
+  const halfStep = (basePeriod / 2) / Math.max(1, edoVal); // 0.5 * (period/edo)
     if (els.detuneRangeMax) {
       els.detuneRangeMax.value = (Math.round(halfStep * 100) / 100).toString();
     }
@@ -207,7 +215,7 @@ wireSelection(els, getState, (detune) => {
   }
 });
 
-// Optimize detune: search within [-50, 50] cents for best alignment
+// Optimize detune across current period bounds
 if (els.optimizeDetuneBtn) {
   els.optimizeDetuneBtn.addEventListener('click', () => {
     const state = getState();
@@ -229,6 +237,7 @@ if (els.optimizeDetuneBtn) {
       jiIntervals,
       jiData: state.jiData || [],
       generateEDOIntervals,
+      basePeriodCents: state.basePeriod || 1200,
       scheme,
       params: {
         symmetric,
@@ -263,7 +272,8 @@ resizeCanvasToContainer();
 // Initialize detune range to half-step for current EDO
 if (els.edoInput && els.detuneRangeMax) {
   const edoVal0 = parseInt(els.edoInput.value) || 12;
-  const halfStep0 = 600 / Math.max(1, edoVal0);
+  const basePeriod0 = 1200; // before first update, default
+  const halfStep0 = (basePeriod0 / 2) / Math.max(1, edoVal0);
   els.detuneRangeMax.value = (Math.round(halfStep0 * 100) / 100).toString();
 }
 applySliderRangeFromInput();
@@ -283,10 +293,11 @@ function redrawWithCurrentState() {
     jiIntervals: state.ji,
     jiData: state.jiData,
     edoIntervals: state.edo,
-    edoOriginalIntervals: state.edoOriginal || generateEDOIntervals(state.edoCount || 12, 1200),
+    edoOriginalIntervals: state.edoOriginal || generateEDOIntervals(state.edoCount || 12, state.basePeriod || 1200),
     showEdoLabels,
     showJiLabels,
     selectedJiIndex: state.selectedJiIndex,
+    periodCents: state.basePeriod || 1200,
   });
   setState({ jiPixelXs: res.jiPixelXs, jiRows: res.jiRows, jiLineH: res.jiLineH });
 }

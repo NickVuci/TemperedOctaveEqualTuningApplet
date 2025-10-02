@@ -96,6 +96,7 @@ export function optimizeDetune({
   jiIntervals,
   jiData,
   generateEDOIntervals,
+  basePeriodCents = 1200,
   scheme = 'uniform',
   params = {},
   bounds = { min: -50, max: 50 },
@@ -107,7 +108,7 @@ export function optimizeDetune({
   const weights = makeWeights(jiData || [], scheme, params);
 
   function scoreForDetune(detune) {
-    const stepsCents = generateEDOIntervals(edo, 1200 + detune);
+  const stepsCents = generateEDOIntervals(edo, basePeriodCents + detune);
     let score = 0;
     // Pass 1: EDO -> JI
     {

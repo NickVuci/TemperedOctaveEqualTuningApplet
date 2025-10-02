@@ -9,7 +9,7 @@ import { mapCentsToX } from "./scale.js";
  * @param {{ctx:CanvasRenderingContext2D,width:number,jiIntervals:number[],jiData:any[],showJiLabels:boolean}} args
  * @returns {{rows:number,rowOf:number[],lineH:number}}
  */
-export function computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels }) {
+export function computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabels, periodCents = 1200 }) {
   const lineH = LAYOUT.jiLabelLineHeight;
   const rowOf = [];
   if (!showJiLabels || !jiIntervals || jiIntervals.length === 0) {
@@ -17,7 +17,7 @@ export function computeJiLabelRows({ ctx, width, jiIntervals, jiData, showJiLabe
   }
   ctx.font = FONTS.label;
   const gap = LAYOUT.labelGap;
-  const domainCents = 1200 + LAYOUT.centsRightBuffer;
+  const domainCents = periodCents + LAYOUT.centsRightBuffer;
   let items = jiIntervals.map((c, i) => {
     const jiObj = jiData && jiData[i];
     const label = (jiObj && jiObj.n && jiObj.d) ? `${jiObj.n}/${jiObj.d}` : '';
